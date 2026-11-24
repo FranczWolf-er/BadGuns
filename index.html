@@ -215,7 +215,7 @@ a{color:#7fd1b8}
         </div>
         <div class="row">
           <div><label>Cena balení (Kč)</label><input type="number" id="rl-powderPackPrice" min="0" step="0.01" inputmode="decimal"></div>
-          <div><label>Hmotnost balení (g)</label><input type="number" id="rl-powderPackGrams" min="0" step="1" inputmode="numeric" placeholder="500"></div>
+          <div><label>Hmotnost balení (g)</label><input type="number" id="rl-powderPackGrams" min="0" step="1" inputmode="numeric" placeholder="např. 500"></div>
         </div>
         <h3 style="margin-top:8px">Zápalka</h3>
         <div class="row">
@@ -952,6 +952,12 @@ const fmtKc = (v, dec = 0) => v == null ? '–' : Number(v).toLocaleString('cs-C
 // Přebíjení: cena jednoho náboje z komponent
 const GR_PER_G = 15.4324;   // 1 g = 15,4324 grainu
 const powderPerRound = r => r.charge > 0 && r.powderPackPrice > 0 && r.powderPackGrams > 0 ? r.charge / GR_PER_G * r.powderPackPrice / r.powderPackGrams : 0;
+// proč se prach nezapočítal (vyplněná jen část údajů)
+function powderMissing(r) {
+  const has = [r.charge > 0, r.powderPackPrice > 0, r.powderPackGrams > 0];
+  if (has.every(Boolean) || !has.some(Boolean)) return '';
+  return ['navážku', 'cenu balení', 'hmotnost balení'].filter((_, i) => !has[i]).join(', ');
+}
 const casePerRound = r => (r.casePrice || 0) / Math.max(1, r.caseUses || 1);
 const reloadUnit = r => (r.bulletPrice || 0) + (r.primerPrice || 0) + casePerRound(r) + powderPerRound(r);
 
@@ -1098,7 +1104,9 @@ function syncReloadUnit() {
   const r = readReloadForm(), u = reloadUnit(r);
   $('#rl-unit').textContent = u ? fmtKc(u, 2) : '–';
   const parts = [['střela', r.bulletPrice || 0], ['prach', powderPerRound(r)], ['zápalka', r.primerPrice || 0], ['nábojnice', casePerRound(r)]].filter(([, v]) => v);
-  $('#rl-break').textContent = u ? parts.map(([n, v]) => `${n} ${fmtKc(v, 2)}`).join(' · ') + (r.qty > 0 ? ` · dávka celkem ${fmtKc(u * r.qty)}` : '') : 'Doplňte ceny komponent.';
+  const pm = powderMissing(r);
+  $('#rl-break').innerHTML = (u ? esc(parts.map(([n, v]) => `${n} ${fmtKc(v, 2)}`).join(' · ') + (r.qty > 0 ? ` · dávka celkem ${fmtKc(u * r.qty)}` : '')) : 'Doplňte ceny komponent.')
+    + (pm ? `<br><span style="color:#ffd98a">⚠ Prach se nezapočítal, doplňte ${esc(pm)}.</span>` : '');
 }
 $('#rlform').addEventListener('input', syncReloadUnit);
 function resetReloadForm() {
@@ -1108,7 +1116,7 @@ function resetReloadForm() {
   $('#rl-cancel').classList.add('hidden');
   $('#rl-copybox').classList.toggle('hidden', !data.reloads.length);
   $('#rl-copy').innerHTML = '<option value="">– nová receptura –</option>' + data.reloads.map(r => `<option value="${esc(r.id)}">${esc(r.date)} · ${esc(r.caliber)} · ${esc(r.bullet || '')}${r.charge ? ' · ' + fmtNum(r.charge) + ' gr ' + esc(r.powder || '') : ''}</option>`).join('');
-  fillReloadForm({}, false);
+  fillReloadForm({ powderPackGrams: 500 }, false);
   $('#rl-qty').value = '';
   $('#rl-date').value = new Date().toISOString().slice(0, 10);
   syncReloadUnit();
@@ -1155,7 +1163,7 @@ function renderReloads() {
     : '<div class="card"><p class="meta" style="margin:0">Zatím žádné dávky. Zapište dávku přebíjení s cenami komponent a aplikace spočítá cenu jednoho náboje.</p></div>';
   const list = data.reloads.length ? `<div class="card"><h3>Dávky</h3>${data.reloads.map(r => `
       <div class="res"><div><b>${fmt(r.qty)} ks ${esc(r.caliber)}</b> · ${fmtKc(reloadUnit(r), 2)}/ks
-        <div class="meta">${esc(r.date)}${r.bullet ? ' · ' + esc(r.bullet) : ''}${r.charge ? ' · ' + fmtNum(r.charge) + ' gr' + (r.powder ? ' ' + esc(r.powder) : '') : ''}${r.primer ? ' · ' + esc(r.primer) : ''}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
+        <div class="meta">${esc(r.date)}${r.bullet ? ' · ' + esc(r.bullet) : ''}${r.charge ? ' · ' + fmtNum(r.charge) + ' gr' + (r.powder ? ' ' + esc(r.powder) : '') : ''}${r.primer ? ' · ' + esc(r.primer) : ''}${r.note ? ' · ' + esc(r.note) : ''}${powderMissing(r) ? `<br><span style="color:#ffd98a">⚠ bez ceny prachu, doplňte ${esc(powderMissing(r))}</span>` : ''}</div></div>
         <div style="display:flex;gap:6px"><button class="ghost" data-rledit="${esc(r.id)}">Upravit</button><button class="danger" data-rldel="${esc(r.id)}">Smazat</button></div></div>`).join('')}</div>` : '';
   $('#reloads').innerHTML = sum + list;
   $('#reloads').querySelectorAll('[data-rledit]').forEach(b => b.onclick = () => startReloadEdit(b.dataset.rledit));
