@@ -48,7 +48,9 @@ button.block{width:100%;margin-top:6px}
 nav{position:fixed;bottom:0;left:0;right:0;background:var(--header);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
 nav button{background:none;color:var(--muted);padding:6px 4px;font-size:13px}
 nav button.active{color:var(--accent);font-weight:600}
-.hidden{display:none}
+#tab-list{padding-bottom:64px}
+#fab{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;padding:0;font-size:30px;line-height:56px;box-shadow:0 4px 12px rgba(0,0,0,.5);z-index:6}
+.hidden{display:none!important}
 .banner{background:#3d2f0f;color:#ffd98a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
 .banner button{margin-left:8px;padding:6px 12px}
 </style>
@@ -60,7 +62,7 @@ nav button.active{color:var(--accent);font-weight:600}
   <div id="upd" class="banner hidden">Je k dispozici nová verze aplikace. <button id="upd-btn">Obnovit</button></div>
   <div id="demo-bar" class="banner hidden">Prohlížíte ukázková data. Klidně zkoušejte, do exportu se nedostanou. <button id="demo-del">Smazat ukázku</button></div>
 
-  <section id="tab-list">
+  <section id="tab-list" class="hidden">
     <div id="list"></div>
   </section>
 
@@ -111,7 +113,7 @@ nav button.active{color:var(--accent);font-weight:600}
     <div id="guns"></div>
   </section>
 
-  <section id="tab-stats" class="hidden">
+  <section id="tab-stats">
     <label>Rok</label>
     <select id="year"></select>
     <div id="stats"></div>
@@ -134,12 +136,12 @@ nav button.active{color:var(--accent);font-weight:600}
 </main>
 
 <nav>
-  <button data-tab="list" class="active">Záznamy</button>
-  <button data-tab="new">Nový</button>
+  <button data-tab="stats" class="active">Přehledy</button>
+  <button data-tab="list">Záznamy</button>
   <button data-tab="guns">Zbraně</button>
-  <button data-tab="stats">Přehledy</button>
   <button data-tab="data">Data</button>
 </nav>
+<button id="fab" class="hidden" aria-label="Nový trénink" title="Nový trénink">+</button>
 
 <script>
 const KEY = 'badguns.v1';
@@ -226,7 +228,8 @@ $('#demo-del').onclick = removeDemo;
 function show(tab, keepForm) {
   updateDemoBar();
   document.querySelectorAll('section[id^="tab-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + tab));
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === (tab === 'new' ? 'list' : tab)));
+  $('#fab').classList.toggle('hidden', tab !== 'list');
   if (tab === 'list') renderList();
   if (tab === 'new' && !keepForm) resetForm();
   if (tab === 'guns') { if (!keepForm) resetGunForm(); renderGuns(); }
@@ -321,7 +324,7 @@ function renderList() {
   const box = $('#list');
   if (!data.trainings.length) {
     box.innerHTML = `<div class="card"><h3>Zatím žádné tréninky</h3>
-      <p class="meta">Začněte záložkou Nový, nebo si nejdřív prohlédněte, jak aplikace funguje na ukázkových datech.</p>
+      <p class="meta">Nový trénink přidáte tlačítkem + vpravo dole, nebo si nejdřív prohlédněte, jak aplikace funguje na ukázkových datech.</p>
       <button class="block ghost" id="demo-add2">Vyplnit ukázková data</button></div>`;
     $('#demo-add2').onclick = addDemo;
     return;
@@ -561,7 +564,8 @@ function swSetup() {
 }
 swSetup();
 
-show('list');
+$('#fab').onclick = () => show('new');
+show('stats');
 </script>
 </body>
 </html>
