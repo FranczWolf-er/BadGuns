@@ -50,7 +50,7 @@ nav button.active{color:var(--accent);font-weight:600}
 
   <section id="tab-new" class="hidden">
     <form id="form" class="card">
-      <h3>Nový trénink</h3>
+      <h3 id="form-title">Nový trénink</h3>
       <label>Datum</label>
       <input type="date" id="f-date" required>
       <label>Místo (střelnice)</label>
@@ -66,7 +66,8 @@ nav button.active{color:var(--accent);font-weight:600}
       <button type="button" class="ghost block" id="add-weapon">+ Přidat zbraň</button>
       <label>Poznámka</label>
       <textarea id="f-note" rows="2"></textarea>
-      <button type="submit" class="block">Uložit trénink</button>
+      <button type="submit" class="block" id="submit-btn">Uložit trénink</button>
+      <button type="button" class="ghost block hidden" id="cancel-edit">Zrušit úpravu</button>
     </form>
   </section>
 
@@ -108,11 +109,11 @@ const fmt = n => Number(n).toLocaleString('cs-CZ');
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const trainingTotal = t => t.weapons.reduce((s, w) => s + w.rounds, 0);
 
-function show(tab) {
+function show(tab, keepForm) {
   document.querySelectorAll('section[id^="tab-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + tab));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (tab === 'list') renderList();
-  if (tab === 'new') resetForm();
+  if (tab === 'new' && !keepForm) resetForm();
   if (tab === 'stats') renderStats();
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
@@ -131,7 +132,12 @@ function weaponRow(w = { name: '', caliber: '', rounds: '' }) {
   d.querySelector('.wdel').onclick = () => d.remove();
   $('#weapons').appendChild(d);
 }
+let editingId = null;
 function resetForm() {
+  editingId = null;
+  $('#form-title').textContent = 'Nový trénink';
+  $('#submit-btn').textContent = 'Uložit trénink';
+  $('#cancel-edit').classList.add('hidden');
   $('#f-date').value = new Date().toISOString().slice(0, 10);
   $('#f-place').value = '';
   $('#f-type').value = 'trénink';
@@ -149,18 +155,37 @@ $('#form').onsubmit = e => {
     rounds: Math.max(0, parseInt(d.querySelector('.wr').value, 10) || 0)
   })).filter(w => w.name || w.rounds);
   if (!weapons.length) { alert('Přidejte alespoň jednu zbraň s počtem ran.'); return; }
-  data.trainings.push({
-    id: uid(),
+  const record = {
+    id: editingId || uid(),
     date: $('#f-date').value,
     place: $('#f-place').value.trim(),
     type: $('#f-type').value,
     note: $('#f-note').value.trim(),
     weapons
-  });
+  };
+  if (editingId) data.trainings = data.trainings.map(t => t.id === editingId ? record : t);
+  else data.trainings.push(record);
   data.trainings.sort((a, b) => b.date.localeCompare(a.date));
   save();
   show('list');
 };
+
+function startEdit(id) {
+  const t = data.trainings.find(x => x.id === id);
+  if (!t) return;
+  editingId = id;
+  $('#f-date').value = t.date;
+  $('#f-place').value = t.place || '';
+  $('#f-type').value = t.type;
+  $('#f-note').value = t.note || '';
+  $('#weapons').innerHTML = '';
+  t.weapons.forEach(w => weaponRow(w));
+  $('#form-title').textContent = 'Upravit trénink';
+  $('#submit-btn').textContent = 'Uložit změny';
+  $('#cancel-edit').classList.remove('hidden');
+  show('new', true);
+}
+$('#cancel-edit').onclick = () => { resetForm(); show('list'); };
 
 /* ---------- Záznamy ---------- */
 function renderList() {
@@ -172,8 +197,9 @@ function renderList() {
       <div class="meta">${esc(t.type)} · celkem <b>${fmt(trainingTotal(t))}</b> ran</div>
       <div class="tags">${t.weapons.map(w => `${esc(w.name)}${w.caliber ? ' (' + esc(w.caliber) + ')' : ''}: ${fmt(w.rounds)}`).join(' · ')}</div>
       ${t.note ? `<div class="meta" style="margin-top:6px">${esc(t.note)}</div>` : ''}
-      <div style="margin-top:10px"><button class="danger" data-del="${esc(t.id)}">Smazat</button></div>
+      <div style="margin-top:10px;display:flex;gap:8px"><button class="ghost" data-edit="${esc(t.id)}">Upravit</button><button class="danger" data-del="${esc(t.id)}">Smazat</button></div>
     </div>`).join('');
+  box.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => startEdit(b.dataset.edit));
   box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     if (!confirm('Smazat tento trénink?')) return;
     data.trainings = data.trainings.filter(t => t.id !== b.dataset.del);
