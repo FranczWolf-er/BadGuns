@@ -54,6 +54,21 @@ nav button{background:none;color:var(--muted);padding:6px 4px;font-size:13px}
 nav button.active{color:var(--accent);font-weight:600}
 #tab-list{padding-bottom:64px}
 #fab{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;padding:0;font-size:30px;line-height:56px;box-shadow:0 4px 12px rgba(0,0,0,.5);z-index:6}
+.star{background:none;padding:2px 4px;font-size:24px;line-height:1;color:var(--muted)}
+.star.on{color:#f2c94c}
+.dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.dhead h3{margin:0}
+.drill{cursor:pointer}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:5px 0;border-bottom:1px solid var(--line)}
+.kv span{color:var(--muted)}
+.kv b{text-align:right;font-weight:500}
+ol.steps{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.5}
+.card p{font-size:14px;line-height:1.5;margin:6px 0}
+.chart{width:100%;height:auto;display:block}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:var(--ghost);color:var(--ink);margin-left:6px}
+.res{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.res button{padding:4px 10px;font-size:13px}
+a{color:#7fd1b8}
 .hidden{display:none!important}
 .banner{background:#3d2f0f;color:#ffd98a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
 .banner button{margin-left:8px;padding:6px 12px}
@@ -119,6 +134,28 @@ nav button.active{color:var(--accent);font-weight:600}
     <div id="guns"></div>
   </section>
 
+  <section id="tab-drills" class="hidden">
+    <div id="drills"></div>
+    <form id="cdform" class="card">
+      <h3>Vlastní cvičení</h3>
+      <label>Název</label>
+      <input type="text" id="cd-name" required placeholder="např. Klubová disciplína 25 m">
+      <label>Popis (jak se střílí)</label>
+      <textarea id="cd-desc" rows="3"></textarea>
+      <label>Hlavní výsledek</label>
+      <select id="cd-prim">
+        <option value="time">čas (méně je lépe)</option>
+        <option value="high">body / zásahy (více je lépe)</option>
+        <option value="low">počet chyb (méně je lépe)</option>
+      </select>
+      <button type="submit" class="block">Přidat cvičení</button>
+    </form>
+  </section>
+
+  <section id="tab-drill" class="hidden">
+    <div id="drill"></div>
+  </section>
+
   <section id="tab-stats">
     <label>Rok</label>
     <select id="year"></select>
@@ -129,7 +166,7 @@ nav button.active{color:var(--accent);font-weight:600}
     <h2 style="margin:4px 2px 12px;font-size:18px">Nastavení</h2>
     <div class="card">
       <h3>Ukázková data</h3>
-      <p class="meta">Vyplní 4 vzorové zbraně a tréninky za posledních 14 měsíců, abyste viděli, jak vypadají záznamy a přehledy. Vaše vlastní data zůstanou beze změny.</p>
+      <p class="meta">Vyplní 4 vzorové zbraně, tréninky za posledních 14 měsíců a výsledky několika cvičení, abyste viděli, jak vypadají záznamy, přehledy a pokrok. Vaše vlastní data zůstanou beze změny.</p>
       <button class="block ghost" id="demo-add">Vyplnit ukázková data</button>
     </div>
     <div class="card">
@@ -145,10 +182,12 @@ nav button.active{color:var(--accent);font-weight:600}
 <nav>
   <button data-tab="stats" class="active">Přehledy</button>
   <button data-tab="list">Záznamy</button>
+  <button data-tab="drills">Cvičení</button>
   <button data-tab="guns">Zbraně</button>
 </nav>
 <button id="fab" class="hidden" aria-label="Nový trénink" title="Nový trénink">+</button>
 
+<script src="drills.js"></script>
 <script>
 const KEY = 'badguns.v1';
 const KINDS = ['pistole', 'revolver', 'puška', 'malorážka', 'brokovnice', 'jiné'];
@@ -157,6 +196,9 @@ try { data = JSON.parse(localStorage.getItem(KEY)) || {}; }
 catch { data = {}; }
 if (!Array.isArray(data.trainings)) data.trainings = [];
 if (!Array.isArray(data.weapons)) data.weapons = [];
+if (!Array.isArray(data.results)) data.results = [];        // výsledky cvičení
+if (!Array.isArray(data.customDrills)) data.customDrills = [];
+if (!Array.isArray(data.favDrills)) data.favDrills = [];
 
 const $ = s => document.querySelector(s);
 const save = () => localStorage.setItem(KEY, JSON.stringify(data));
@@ -180,7 +222,7 @@ const usageCount = id => data.trainings.filter(t => t.weapons.some(e => e.weapon
 const sortedGuns = () => [...data.weapons].sort((a, b) => (!!a.archived - !!b.archived) || a.name.localeCompare(b.name, 'cs'));
 
 /* ---------- Ukázková data ---------- */
-const hasDemo = () => data.weapons.some(g => g.demo) || data.trainings.some(t => t.demo);
+const hasDemo = () => data.weapons.some(g => g.demo) || data.trainings.some(t => t.demo) || data.results.some(r => r.demo);
 const updateDemoBar = () => $('#demo-bar').classList.toggle('hidden', !hasDemo());
 
 function addDemo() {
@@ -212,6 +254,19 @@ function addDemo() {
         rounds: (guns[i].kind === 'malorážka' ? 50 : 25) * (1 + rnd(4)) }))
     });
   }
+  // výsledky cvičení se zlepšujícím se trendem
+  const demoRes = (drillId, count, start, end, gun, extra) => {
+    for (let i = 0; i < count; i++) {
+      const d = new Date(today); d.setDate(d.getDate() - Math.round((count - 1 - i) * 380 / count) - 2);
+      const v = start + (end - start) * i / (count - 1) + (rnd(100) - 50) / 100 * Math.abs(end - start) * 0.25;
+      data.results.push({ id: uid(), demo: true, drillId, date: d.toISOString().slice(0, 10), weaponId: guns[gun].id, note: '', ...extra(v) });
+    }
+  };
+  demoRes('bill', 9, 5.2, 3.4, 0, v => ({ time: +v.toFixed(2), score: 6 }));
+  demoRes('elpres', 7, 12.8, 7.1, 1, v => ({ time: +v.toFixed(2), score: 12 }));
+  demoRes('dot', 6, 38, 49, 0, v => ({ score: Math.min(50, Math.round(v)) }));
+  demoRes('test', 5, 71, 92, 1, v => ({ score: Math.min(100, Math.round(v)), time: 10 }));
+  data.favDrills = [...new Set([...data.favDrills, 'bill', 'dot'])];
   data.weapons.push(...guns);
   data.trainings.push(...trainings);
   data.trainings.sort((a, b) => b.date.localeCompare(a.date));
@@ -224,6 +279,8 @@ function removeDemo() {
   const ids = new Set(data.weapons.filter(g => g.demo).map(g => g.id));
   data.weapons = data.weapons.filter(g => !g.demo);
   data.trainings = data.trainings.filter(t => !t.demo);
+  data.results = data.results.filter(r => !r.demo);
+  data.results.forEach(r => { if (ids.has(r.weaponId)) delete r.weaponId; });
   data.trainings.forEach(t => t.weapons.forEach(e => { if (ids.has(e.weaponId)) delete e.weaponId; }));
   save();
   show('list');
@@ -234,12 +291,13 @@ $('#demo-del').onclick = removeDemo;
 function show(tab, keepForm) {
   updateDemoBar();
   document.querySelectorAll('section[id^="tab-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + tab));
-  document.querySelectorAll('nav button, #gear').forEach(b => b.classList.toggle('active', b.dataset.tab === (tab === 'new' ? 'list' : tab)));
+  document.querySelectorAll('nav button, #gear').forEach(b => b.classList.toggle('active', b.dataset.tab === ({ new: 'list', drill: 'drills' }[tab] || tab)));
   $('#fab').classList.toggle('hidden', tab !== 'list');
   if (tab === 'list') renderList();
   if (tab === 'new' && !keepForm) resetForm();
   if (tab === 'guns') { if (!keepForm) resetGunForm(); renderGuns(); }
   if (tab === 'stats') renderStats();
+  if (tab === 'drills') renderDrills();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('nav button, #gear').forEach(b => b.onclick = () => show(b.dataset.tab));
@@ -464,6 +522,169 @@ function renderGuns() {
   });
 }
 
+/* ---------- Cvičení ---------- */
+const allDrills = () => [...DRILLS, ...data.customDrills];
+const drillById = id => allDrills().find(d => d.id === id);
+const isFav = id => data.favDrills.includes(id);
+const drillResults = id => data.results.filter(r => r.drillId === id).sort((a, b) => a.date.localeCompare(b.date) || (a.ts || 0) - (b.ts || 0));
+const lowerBetter = d => d.primary === 'time' || d.better === 'low';
+const primVal = (d, r) => d.primary === 'time' ? r.time : r.score;
+const fmtNum = v => v == null ? '–' : Number(v).toLocaleString('cs-CZ', { maximumFractionDigits: 2 });
+const fmtPrim = (d, v) => v == null ? '–' : fmtNum(v) + (d.primary === 'time' ? ' s' : '');
+const bestOf = (d, rs) => {
+  const vs = rs.map(r => primVal(d, r)).filter(v => v != null);
+  return vs.length ? (lowerBetter(d) ? Math.min(...vs) : Math.max(...vs)) : null;
+};
+function drillClass(d, t) {
+  if (!d.classes || t == null) return '';
+  const c = d.classes.find(([, lim]) => t <= lim);
+  return c ? c[0] : (d.classOver || 'pod D');
+}
+
+function toggleFav(id) {
+  data.favDrills = isFav(id) ? data.favDrills.filter(x => x !== id) : [...data.favDrills, id];
+  save();
+}
+
+function renderDrills() {
+  const list = allDrills().map((d, i) => ({ d, i })).sort((a, b) => (isFav(b.d.id) - isFav(a.d.id)) || a.i - b.i);
+  $('#drills').innerHTML = list.map(({ d }) => {
+    const rs = drillResults(d.id), last = rs[rs.length - 1], best = bestOf(d, rs);
+    return `<div class="card drill" data-open="${esc(d.id)}">
+      <div class="dhead"><h3>${esc(d.name)}${d.custom ? '<span class="pill">vlastní</span>' : ''}</h3>
+        <button class="star${isFav(d.id) ? ' on' : ''}" data-fav="${esc(d.id)}" aria-label="Oblíbené">${isFav(d.id) ? '★' : '☆'}</button></div>
+      <div class="meta">${esc(d.summary || d.desc || '')}</div>
+      ${rs.length ? `<div class="tags">Nejlepší <b>${fmtPrim(d, best)}</b> · poslední ${fmtPrim(d, last && primVal(d, last))} · ${rs.length} ${plural(rs.length, 'pokus', 'pokusy', 'pokusů')}</div>` : ''}
+    </div>`;
+  }).join('');
+  $('#drills').querySelectorAll('[data-fav]').forEach(b => b.onclick = ev => { ev.stopPropagation(); toggleFav(b.dataset.fav); renderDrills(); });
+  $('#drills').querySelectorAll('[data-open]').forEach(c => c.onclick = () => openDrill(c.dataset.open));
+}
+
+$('#cdform').onsubmit = ev => {
+  ev.preventDefault();
+  const name = $('#cd-name').value.trim();
+  if (!name) return;
+  const p = $('#cd-prim').value;
+  data.customDrills.push({
+    id: 'c-' + uid(), custom: true, name, desc: $('#cd-desc').value.trim(),
+    primary: p === 'time' ? 'time' : 'score', better: p === 'time' ? undefined : p,
+    scoreLabel: p === 'time' ? 'Zásahy' : (p === 'low' ? 'Počet chyb' : 'Body / zásahy')
+  });
+  save();
+  $('#cd-name').value = ''; $('#cd-desc').value = '';
+  renderDrills();
+};
+
+// jednoduchý čárový graf hlavního výsledku v čase
+function progressChart(d, rs) {
+  const pts = rs.filter(r => primVal(d, r) != null);
+  if (pts.length < 2) return '<p class="meta">Graf se zobrazí od dvou zapsaných výsledků.</p>';
+  const W = 340, H = 150, L = 34, R = 8, T = 10, B = 22;
+  const vs = pts.map(r => primVal(d, r));
+  let lo = Math.min(...vs), hi = Math.max(...vs);
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+  const t0 = Date.parse(pts[0].date), t1 = Date.parse(pts[pts.length - 1].date) || t0 + 1;
+  const x = r => L + (W - L - R) * (t1 === t0 ? pts.indexOf(r) / (pts.length - 1) : (Date.parse(r.date) - t0) / (t1 - t0));
+  // u času je lepší hodnota nahoře
+  const y = v => lowerBetter(d) ? T + (H - T - B) * (v - lo) / (hi - lo) : T + (H - T - B) * (hi - v) / (hi - lo);
+  const path = pts.map((r, i) => (i ? 'L' : 'M') + x(r).toFixed(1) + ' ' + y(primVal(d, r)).toFixed(1)).join(' ');
+  const best = bestOf(d, pts);
+  const yl = [hi - pad, lo + pad];
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Vývoj výsledků">
+    ${yl.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 4}" y="${y(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${fmtNum(+v.toFixed(2))}</text>`).join('')}
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${pts.map(r => { const v = primVal(d, r); return `<circle cx="${x(r)}" cy="${y(v)}" r="${v === best ? 5 : 3.5}" fill="${v === best ? '#f2c94c' : 'var(--accent)'}"/>`; }).join('')}
+    <text x="${L}" y="${H - 6}" font-size="10" fill="var(--muted)">${esc(pts[0].date)}</text>
+    <text x="${W - R}" y="${H - 6}" font-size="10" fill="var(--muted)" text-anchor="end">${esc(pts[pts.length - 1].date)}</text>
+  </svg><div class="meta">${d.primary === 'time' ? 'Čas, lepší výsledek je výš.' : (d.better === 'low' ? 'Méně je lépe, lepší výsledek je výš.' : 'Více je lépe.')} Žlutě nejlepší výsledek.</div>`;
+}
+
+let currentDrill = null;
+function openDrill(id) {
+  currentDrill = id;
+  show('drill');
+  renderDrill();
+}
+
+function renderDrill() {
+  const d = drillById(currentDrill);
+  if (!d) { show('drills'); return; }
+  const rs = drillResults(d.id), best = bestOf(d, rs), last = rs[rs.length - 1];
+  const guns = sortedGuns().filter(g => !g.archived);
+  const facts = d.facts ? `<div>${Object.entries(d.facts).map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>` : '';
+  const theory = d.custom ? (d.desc ? `<p>${esc(d.desc)}</p>` : '<p class="meta">Bez popisu.</p>') : `
+    ${facts}
+    <h3 style="margin-top:14px">Průběh</h3><ol class="steps">${d.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+    <h3 style="margin-top:14px">Hodnocení</h3><p>${esc(d.scoring)}</p>
+    ${d.classes ? `<p class="meta">Třídy podle času: ${d.classes.map(([c, t]) => `${esc(c)} ≤ ${fmtNum(t)} s`).join(' · ')}</p>` : ''}
+    <h3 style="margin-top:14px">K čemu je</h3><p>${esc(d.purpose)}</p>
+    ${d.variants ? `<p class="meta">Varianty: ${esc(d.variants)}</p>` : ''}
+    <p class="meta"><a href="${esc(d.source)}" target="_blank" rel="noopener">Podrobnosti a terče na gun.4fan.cz</a></p>`;
+  const timeField = `<div><label>Čas (s)${d.primary === 'time' ? '' : ', nepovinné'}</label><input type="number" id="r-time" step="0.01" min="0" inputmode="decimal"${d.primary === 'time' ? ' required' : ''}></div>`;
+  const scoreField = `<div><label>${esc(d.scoreLabel || 'Body')}${d.primary === 'score' ? '' : ', nepovinné'}</label><input type="number" id="r-score" step="any" min="0"${d.scoreMax ? ` max="${d.scoreMax}"` : ''} inputmode="decimal"${d.primary === 'score' ? ' required' : ''}></div>`;
+  $('#drill').innerHTML = `
+    <button class="ghost" id="d-back" style="margin-bottom:10px">‹ Všechna cvičení</button>
+    <div class="card">
+      <div class="dhead"><h3 style="font-size:20px">${esc(d.name)}</h3>
+        <button class="star${isFav(d.id) ? ' on' : ''}" id="d-fav" aria-label="Oblíbené">${isFav(d.id) ? '★' : '☆'}</button></div>
+      <p class="meta">${esc(d.summary || '')}</p>
+      ${theory}
+    </div>
+    <div class="card">
+      <h3>Pokrok</h3>
+      ${rs.length ? `<div class="summary" style="margin-bottom:10px">
+        <div class="stat"><b>${fmtPrim(d, best)}</b><span>nejlepší${d.classes ? ' · ' + esc(drillClass(d, best)) : ''}</span></div>
+        <div class="stat"><b>${fmtPrim(d, primVal(d, last))}</b><span>poslední</span></div>
+        <div class="stat"><b>${rs.length}</b><span>${plural(rs.length, 'pokus', 'pokusy', 'pokusů')}</span></div></div>` : ''}
+      ${progressChart(d, rs)}
+    </div>
+    <form class="card" id="rform">
+      <h3>Zapsat výsledek</h3>
+      <div class="row"><div><label>Datum</label><input type="date" id="r-date" required value="${new Date().toISOString().slice(0, 10)}"></div>
+        <div><label>Zbraň</label><select id="r-gun"><option value="">neuvedena</option>${guns.map(g => `<option value="${esc(g.id)}">${esc(gunName(g))}</option>`).join('')}</select></div></div>
+      <div class="row">${d.primary === 'time' ? timeField + scoreField : scoreField + timeField}</div>
+      <label>Poznámka</label><input type="text" id="r-note" placeholder="např. vzdálenost 10 m, nová mířidla">
+      <button type="submit" class="block">Uložit výsledek</button>
+    </form>
+    ${rs.length ? `<div class="card"><h3>Historie</h3>${[...rs].reverse().map(r => `
+      <div class="res"><div><b>${fmtPrim(d, primVal(d, r))}</b>${d.classes && r.time != null ? `<span class="pill">${esc(drillClass(d, r.time))}</span>` : ''}
+        <div class="meta">${esc(r.date)}${d.primary === 'time' && r.score != null ? ' · ' + esc(d.scoreLabel || '') + ' ' + fmtNum(r.score) + (d.scoreMax ? '/' + d.scoreMax : '') : ''}${d.primary === 'score' && r.time != null ? ' · ' + fmtNum(r.time) + ' s' : ''}${weaponById(r.weaponId) ? ' · ' + esc(weaponById(r.weaponId).name) : ''}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
+        <button class="danger" data-rdel="${esc(r.id)}">Smazat</button></div>`).join('')}</div>` : ''}
+    ${d.custom ? '<button class="danger block" id="d-del">Smazat vlastní cvičení</button>' : ''}`;
+  $('#d-back').onclick = () => show('drills');
+  $('#d-fav').onclick = () => { toggleFav(d.id); renderDrill(); };
+  const lastGun = [...data.results].reverse().find(r => r.drillId === d.id && weaponById(r.weaponId));
+  if (lastGun && guns.some(g => g.id === lastGun.weaponId)) $('#r-gun').value = lastGun.weaponId;
+  $('#rform').onsubmit = ev => {
+    ev.preventDefault();
+    const num = id => { const v = $(id).value.replace(',', '.'); return v === '' ? undefined : Math.max(0, parseFloat(v)); };
+    const r = { id: uid(), ts: Date.now(), drillId: d.id, date: $('#r-date').value, time: num('#r-time'), score: num('#r-score'),
+      weaponId: $('#r-gun').value || undefined, note: $('#r-note').value.trim() };
+    if (primVal(d, r) == null || isNaN(primVal(d, r))) { alert('Vyplňte hlavní výsledek.'); return; }
+    data.results.push(r);
+    save();
+    renderDrill();
+  };
+  $('#drill').querySelectorAll('[data-rdel]').forEach(b => b.onclick = () => {
+    if (!confirm('Smazat tento výsledek?')) return;
+    data.results = data.results.filter(r => r.id !== b.dataset.rdel);
+    save();
+    renderDrill();
+  });
+  const del = $('#d-del');
+  if (del) del.onclick = () => {
+    const n = drillResults(d.id).length;
+    if (!confirm(n ? `Smazat cvičení i ${n} ${plural(n, 'výsledek', 'výsledky', 'výsledků')}?` : 'Smazat cvičení?')) return;
+    data.customDrills = data.customDrills.filter(x => x.id !== d.id);
+    data.results = data.results.filter(r => r.drillId !== d.id);
+    data.favDrills = data.favDrills.filter(x => x !== d.id);
+    save();
+    show('drills');
+  };
+}
+
 /* ---------- Přehledy ---------- */
 $('#year').onchange = renderStats;
 
@@ -516,7 +737,8 @@ function renderStats() {
 
 /* ---------- Data ---------- */
 $('#export').onclick = () => {
-  const out = { weapons: data.weapons.filter(g => !g.demo), trainings: data.trainings.filter(t => !t.demo) };
+  const out = { weapons: data.weapons.filter(g => !g.demo), trainings: data.trainings.filter(t => !t.demo),
+    results: data.results.filter(r => !r.demo), customDrills: data.customDrills, favDrills: data.favDrills };
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -539,8 +761,17 @@ $('#import').onchange = async ev => {
     const added = incoming.trainings.filter(t => t && t.id && !ids.has(t.id) && Array.isArray(t.weapons));
     data.trainings.push(...added);
     data.trainings.sort((a, b) => b.date.localeCompare(a.date));
+    const mergeById = (key, valid) => {
+      const have = new Set(data[key].map(x => x.id));
+      const add = (Array.isArray(incoming[key]) ? incoming[key] : []).filter(x => x && x.id && !have.has(x.id) && valid(x));
+      data[key].push(...add);
+      return add.length;
+    };
+    const nR = mergeById('results', r => r.drillId && r.date);
+    mergeById('customDrills', d => d.name);
+    if (Array.isArray(incoming.favDrills)) data.favDrills = [...new Set([...data.favDrills, ...incoming.favDrills])];
     save();
-    alert(`Přidáno tréninků: ${added.length}, zbraní: ${addedW.length}`);
+    alert(`Přidáno tréninků: ${added.length}, zbraní: ${addedW.length}, výsledků cvičení: ${nR}`);
   } catch (err) {
     alert('Import selhal: ' + err.message);
   }
