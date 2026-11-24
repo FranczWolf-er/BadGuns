@@ -83,19 +83,19 @@ const DRILLS = [
   },
   {
     id: 'moz', name: 'Mozambique Drill', primary: 'time', scoreLabel: 'Platné zásahy (z 3)', scoreMax: 3,
-    summary: '2 rány do těla a 1 do hlavy.',
-    facts: { 'Vzdálenost': 'obvykle 3–7 m', 'Terč': 'postavový terč se zónou hlavy', 'Výchozí pozice': 'zbraň v pouzdře nebo pohotovostní poloha', 'Náboje': '3' },
-    steps: ['Dvě rychlé rány do hrudníku.', 'Třetí, mířená rána do hlavy.'],
-    scoring: 'Platí jen pokus se 2 zásahy v hrudní zóně A a 1 v hlavě. Výsledkem je čas.',
-    purpose: 'Přechod z rychlé střelby na velký cíl na přesnou ránu do malého cíle.',
+    summary: '2 rány na tělo a 1 na hlavu, technika na blízkou vzdálenost.',
+    facts: { 'Vzdálenost': 'asi 5 m (pistole 5–10 m, puška 15–25 m)', 'Terč': 'figura IPSC, IDPA nebo LOS', 'Výchozí pozice': 'zbraň v pouzdře', 'Náboje': '3' },
+    steps: ['Na signál tasíte.', 'Dvě rány na tělo.', 'Jedna rána na hlavu.'],
+    scoring: 'Výsledkem je čas. Počítejte jen pokus, kdy obě rány jsou v zóně A těla a třetí v hlavě. Pro srovnání: špičkoví střelci to zvládnou pod 1 s.',
+    purpose: 'Střelecká technika na blízkou vzdálenost: přechod z rychlých ran na velký cíl k přesné ráně na malý cíl. Vyzkoušejte i kratší a delší vzdálenosti.',
     source: 'https://gun.4fan.cz/2021/02/mozambique-drill/'
   },
   {
     id: 'test', name: 'The Test (10-10-10)', primary: 'score', scoreLabel: 'Body (ze 100)', scoreMax: 100, better: 'high',
     summary: '10 ran, 10 yardů, 10 sekund na terčový kruh.',
-    facts: { 'Vzdálenost': '9,1 m (10 yardů)', 'Terč': 'terč s kruhy (bodované zóny 10 až 5)', 'Náboje': '10', 'Čas': 'limit 10 s' },
-    steps: ['Ze zvolené výchozí polohy vystřelíte 10 ran během 10 sekund.'],
-    scoring: 'Sečtou se body, maximum je 100. Rány po limitu se nepočítají. 90 a více je velmi dobrý výsledek.',
+    facts: { 'Vzdálenost': '9,14 m (10 yardů)', 'Terč': 'NRA B8 oříznutý na A4', 'Výchozí pozice': 'nabitá zbraň v nízké pohotovostní poloze (pokročilí z pouzdra nebo krytého nošení)', 'Náboje': '10', 'Čas': 'limit 10 s' },
+    steps: ['Na signál vystřelíte všech 10 ran na terč během 10 sekund.'],
+    scoring: 'Body podle Hackathorna: X a 10 = 10 bodů, 9 = 9 bodů atd. Pro splnění je potřeba aspoň 90 bodů. Varianta podle Vickerse: vše v černé, +1 s za ránu mimo černou, +3 s za ránu mimo terč a celkový čas musí být pod 10 s. Se zbraní na méně než 10 nábojů zkraťte limit podle kapacity a pro splnění stačí 90 % maxima (např. 7 ran: 7 s a 63 bodů).',
     purpose: 'Kombinace rychlosti a přesnosti na střední vzdálenosti.',
     source: 'https://gun.4fan.cz/2021/03/the-test/'
   },
