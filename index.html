@@ -58,6 +58,7 @@ nav button.active{color:var(--accent);font-weight:600}
 
 <main>
   <div id="upd" class="banner hidden">Je k dispozici nová verze aplikace. <button id="upd-btn">Obnovit</button></div>
+  <div id="demo-bar" class="banner hidden">Prohlížíte ukázková data. Klidně zkoušejte, do exportu se nedostanou. <button id="demo-del">Smazat ukázku</button></div>
 
   <section id="tab-list">
     <div id="list"></div>
@@ -118,6 +119,11 @@ nav button.active{color:var(--accent);font-weight:600}
 
   <section id="tab-data" class="hidden">
     <div class="card">
+      <h3>Ukázková data</h3>
+      <p class="meta">Vyplní 4 vzorové zbraně a tréninky za posledních 14 měsíců, abyste viděli, jak vypadají záznamy a přehledy. Vaše vlastní data zůstanou beze změny.</p>
+      <button class="block ghost" id="demo-add">Vyplnit ukázková data</button>
+    </div>
+    <div class="card">
       <h3>Export a import</h3>
       <p class="meta">Data se ukládají jen v tomto prohlížeči. Export vytvoří soubor JSON se zbraněmi i tréninky, který můžete zálohovat nebo později předat klubu.</p>
       <button class="block" id="export">Stáhnout export (JSON)</button>
@@ -165,7 +171,60 @@ const roundsFor = (id, year) => data.trainings
 const usageCount = id => data.trainings.filter(t => t.weapons.some(e => e.weaponId === id)).length;
 const sortedGuns = () => [...data.weapons].sort((a, b) => (!!a.archived - !!b.archived) || a.name.localeCompare(b.name, 'cs'));
 
+/* ---------- Ukázková data ---------- */
+const hasDemo = () => data.weapons.some(g => g.demo) || data.trainings.some(t => t.demo);
+const updateDemoBar = () => $('#demo-bar').classList.toggle('hidden', !hasDemo());
+
+function addDemo() {
+  if (hasDemo()) { alert('Ukázková data už jsou vyplněná.'); return; }
+  const guns = [
+    { name: 'CZ Shadow 2', kind: 'pistole', caliber: '9 mm Luger', note: 'sportovní' },
+    { name: 'Glock 17', kind: 'pistole', caliber: '9 mm Luger', note: '' },
+    { name: 'CZ 457', kind: 'malorážka', caliber: '.22 LR', note: 'puškohled 3–9×' },
+    { name: 'Ruger GP100', kind: 'revolver', caliber: '.357 Mag', note: 'nepoužívám', archived: true }
+  ].map(g => ({ id: uid(), archived: false, demo: true, ...g }));
+  const places = ['Střelnice Ruzyně', 'Střelnice Hostivice', 'Střelnice Kladno'];
+  let seed = 7;
+  const rnd = n => { seed = (seed * 9301 + 49297) % 233280; return Math.floor(seed / 233280 * n); };
+  const today = new Date();
+  const trainings = [];
+  for (let back = 0; back < 430; back += 7 + rnd(14)) {
+    const d = new Date(today); d.setDate(d.getDate() - back - 1);
+    const active = back > 200 ? [0, 1, 3] : [0, 1, 2];           // revolver jen ve starších záznamech
+    const n = 1 + rnd(2);
+    const used = [...new Set(Array.from({ length: n }, () => active[rnd(active.length)]))];
+    const comp = rnd(8) === 0;
+    trainings.push({
+      id: uid(), demo: true,
+      date: d.toISOString().slice(0, 10),
+      place: places[rnd(places.length)],
+      type: comp ? 'závod' : 'trénink',
+      note: comp ? 'Klubový závod' : '',
+      weapons: used.map(i => ({ weaponId: guns[i].id, name: guns[i].name, caliber: guns[i].caliber,
+        rounds: (guns[i].kind === 'malorážka' ? 50 : 25) * (1 + rnd(4)) }))
+    });
+  }
+  data.weapons.push(...guns);
+  data.trainings.push(...trainings);
+  data.trainings.sort((a, b) => b.date.localeCompare(a.date));
+  save();
+  show('list');
+}
+
+function removeDemo() {
+  if (!confirm('Smazat ukázková data? Vaše vlastní záznamy zůstanou.')) return;
+  const ids = new Set(data.weapons.filter(g => g.demo).map(g => g.id));
+  data.weapons = data.weapons.filter(g => !g.demo);
+  data.trainings = data.trainings.filter(t => !t.demo);
+  data.trainings.forEach(t => t.weapons.forEach(e => { if (ids.has(e.weaponId)) delete e.weaponId; }));
+  save();
+  show('list');
+}
+$('#demo-add').onclick = addDemo;
+$('#demo-del').onclick = removeDemo;
+
 function show(tab, keepForm) {
+  updateDemoBar();
   document.querySelectorAll('section[id^="tab-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + tab));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (tab === 'list') renderList();
@@ -260,7 +319,13 @@ $('#cancel-edit').onclick = () => { resetForm(); show('list'); };
 /* ---------- Záznamy ---------- */
 function renderList() {
   const box = $('#list');
-  if (!data.trainings.length) { box.innerHTML = '<p class="meta">Zatím žádné tréninky.</p>'; return; }
+  if (!data.trainings.length) {
+    box.innerHTML = `<div class="card"><h3>Zatím žádné tréninky</h3>
+      <p class="meta">Začněte záložkou Nový, nebo si nejdřív prohlédněte, jak aplikace funguje na ukázkových datech.</p>
+      <button class="block ghost" id="demo-add2">Vyplnit ukázková data</button></div>`;
+    $('#demo-add2').onclick = addDemo;
+    return;
+  }
   box.innerHTML = data.trainings.map(t => `
     <div class="card">
       <h3>${esc(t.date)} · ${esc(t.place || 'bez místa')}</h3>
@@ -442,7 +507,8 @@ function renderStats() {
 
 /* ---------- Data ---------- */
 $('#export').onclick = () => {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const out = { weapons: data.weapons.filter(g => !g.demo), trainings: data.trainings.filter(t => !t.demo) };
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `badguns-${new Date().toISOString().slice(0, 10)}.json`;

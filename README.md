@@ -7,6 +7,7 @@ Jednoduchá webová aplikace pro evidenci tréninků na střelnici a počtu vyst
 - Evidence zbraní (název, druh, ráže, poznámka, vyřazení) s celkovým a letošním počtem ran.
 - Přehledy: celkem ran za rok, po měsících a po zbraních.
 - Export a import dat ve formátu JSON.
+- Ukázková data pro vyzkoušení (do exportu se nedostanou, jdou smazat jedním tlačítkem).
 - Tmavý režim, instalace na plochu a upozornění na novou verzi.
 
 ## Použití
