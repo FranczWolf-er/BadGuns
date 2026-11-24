@@ -8,6 +8,7 @@ Jednoduchá webová aplikace pro evidenci tréninků na střelnici a počtu vyst
 - Přehledy: celkem ran za rok, graf po měsících barevně rozdělený podle ráže, přehled podle ráže a podle zbraně.
 - Automatická záloha na OneDrive se synchronizací mezi zařízeními (nastavení viz `NAVOD.md`).
 - Export a import dat ve formátu JSON.
+- Záložka Výkony: přepínání Cvičení / Závody. Závody s vlastními typy, výsledky (body, čas, umístění, procenta) a grafem pokroku.
 - Střelecká cvičení (Bill Drill, El Presidente, Dot Torture…) s teorií, zápisem výsledků, grafem pokroku a oblíbenými; typy cvičení s filtrem, lze přidat vlastní cvičení i vlastní typ.
 - Ukázková data pro vyzkoušení (do exportu se nedostanou, jdou smazat jedním tlačítkem).
 - Tmavý režim, instalace na plochu a upozornění na novou verzi.
