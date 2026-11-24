@@ -76,6 +76,8 @@ a{color:#7fd1b8}
 .stack>div{display:flex;gap:2px;height:100%}
 .stack>div i{display:block;height:100%;min-width:2px}
 .stack>div i:last-child{border-radius:0 4px 4px 0}
+.mrow{cursor:pointer}
+.mrow.open .m{color:var(--accent);font-weight:600}
 .mdetail{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12px;color:var(--muted);margin:1px 0 8px 34px}
 .mdetail span{white-space:nowrap}
 .mdetail i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
@@ -881,14 +883,15 @@ function renderStats() {
       <h3>Podle měsíců</h3>
       ${legend}
       ${months.map((m, i) => `
-        <div class="bar-row">
+        <div class="bar-row${mTot[i] ? ' mrow' : ''}" data-m="${i}">
           <span class="m">${String(i + 1).padStart(2, '0')}</span>
           <div class="bar stack"><div style="width:${(mTot[i] / max * 100).toFixed(1)}%">${order.filter(g => m.get(g)).map(g =>
             `<i style="flex:${m.get(g)};background:${groupInfo(g).color}" title="${esc(groupInfo(g).label)}: ${fmt(m.get(g))}"></i>`).join('')}</div></div>
           <span class="v">${fmt(mTot[i])}</span>
         </div>
-        ${mTot[i] ? `<div class="mdetail" aria-label="${MONTHS[i]}">${order.filter(g => m.get(g)).map(g =>
+        ${mTot[i] ? `<div class="mdetail hidden" id="md-${i}" aria-label="${MONTHS[i]}">${order.filter(g => m.get(g)).map(g =>
           `<span><i style="background:${groupInfo(g).color}"></i>${esc(groupInfo(g).label)} <b>${fmt(m.get(g))}</b></span>`).join('')}</div>` : ''}`).join('')}
+      <div class="meta" style="margin-top:6px">Klepnutím na měsíc zobrazíte rozpis podle ráže.</div>
     </div>
     <div class="card">
       <h3>Podle ráže</h3>
@@ -907,6 +910,10 @@ function renderStats() {
         .map(v => `<div class="cal-row"><span class="sw" style="background:${groupInfo(v.g).color}"></span><span class="cl">${esc(v.label)}</span><span class="cv"><b>${fmt(v.n)}</b></span></div>`).join('')
         || '<p class="meta">Pro tento rok nejsou žádná data.</p>'}
     </div>`;
+  $('#stats').querySelectorAll('.mrow').forEach(r => r.onclick = () => {
+    $('#md-' + r.dataset.m).classList.toggle('hidden');
+    r.classList.toggle('open');
+  });
 }
 
 /* ---------- Data ---------- */
