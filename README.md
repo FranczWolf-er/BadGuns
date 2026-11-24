@@ -6,6 +6,7 @@ Jednoduchá webová aplikace pro evidenci tréninků na střelnici a počtu vyst
 - Jeden trénink může obsahovat více zbraní, každá s vlastním počtem ran.
 - Evidence zbraní (název, druh, ráže, poznámka, vyřazení) s celkovým a letošním počtem ran.
 - Přehledy: celkem ran za rok, graf po měsících barevně rozdělený podle ráže, přehled podle ráže a podle zbraně.
+- Automatická záloha na OneDrive se synchronizací mezi zařízeními (nastavení viz `NAVOD.md`).
 - Export a import dat ve formátu JSON.
 - Střelecká cvičení (Bill Drill, El Presidente, Dot Torture…) s teorií, zápisem výsledků, grafem pokroku a oblíbenými; typy cvičení s filtrem, lze přidat vlastní cvičení i vlastní typ.
 - Ukázková data pro vyzkoušení (do exportu se nedostanou, jdou smazat jedním tlačítkem).
@@ -13,10 +14,10 @@ Jednoduchá webová aplikace pro evidenci tréninků na střelnici a počtu vyst
 
 ## Použití
 
-Aplikace je statická stránka bez závislostí (`index.html`, `drills.js`, `sw.js`, `manifest.webmanifest`, ikony). Stačí ji nasadit na GitHub Pages.
+Aplikace je statická stránka bez závislostí (`index.html`, `config.js`, `drills.js`, `cloud.js`, `sw.js`, `manifest.webmanifest`, ikony). Stačí ji nasadit na GitHub Pages.
 
 Při každé změně souborů zvyšte v `sw.js` číslo verze `CACHE`, aby si zařízení stáhla novou verzi a zobrazila upozornění.
 
 ## Soukromí
 
-Data se ukládají pouze v `localStorage` daného prohlížeče. Do repozitáře se nikdy nedostávají, repozitář obsahuje jen kód aplikace.
+Data se ukládají v `localStorage` daného prohlížeče a volitelně se zálohují na váš OneDrive. Do repozitáře se nikdy nedostávají, repozitář obsahuje jen kód aplikace.

@@ -19,6 +19,9 @@ body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;b
 header{background:var(--header);color:var(--ink);padding:14px 16px;position:sticky;top:0;z-index:5}
 header{display:flex;align-items:center;justify-content:space-between}
 header h1{margin:0;font-size:20px}
+.hright{display:flex;align-items:center;gap:4px}
+.sync{font-size:12px;color:var(--muted);white-space:nowrap}
+.sync.local,.sync.err{color:#ffd98a}
 #gear{background:none;padding:6px;color:var(--muted);display:flex}
 #gear.active{color:var(--accent)}
 #gear svg{width:26px;height:26px}
@@ -92,11 +95,13 @@ a{color:#7fd1b8}
 </head>
 <body>
 <header><h1>🎯 BadGuns</h1>
-  <button id="gear" data-tab="data" aria-label="Nastavení" title="Nastavení"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  <div class="hright"><span id="sync" class="sync" role="status"></span>
+  <button id="gear" data-tab="data" aria-label="Nastavení" title="Nastavení"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
 </header>
 
 <main>
   <div id="upd" class="banner hidden">Je k dispozici nová verze aplikace. <button id="upd-btn">Obnovit</button></div>
+  <div id="login-bar" class="banner hidden">Přihlášení k OneDrive vypršelo, záloha čeká. <button id="login-btn">Přihlásit</button></div>
   <div id="demo-bar" class="banner hidden">Prohlížíte ukázková data. Klidně zkoušejte, do exportu se nedostanou. <button id="demo-del">Smazat ukázku</button></div>
 
   <section id="tab-list" class="hidden">
@@ -187,13 +192,17 @@ a{color:#7fd1b8}
   <section id="tab-data" class="hidden">
     <h2 style="margin:4px 2px 12px;font-size:18px">Nastavení</h2>
     <div class="card">
+      <h3>Záloha na OneDrive</h3>
+      <div id="cloud"></div>
+    </div>
+    <div class="card">
       <h3>Ukázková data</h3>
       <p class="meta">Vyplní 6 vzorových zbraní (pistole, revolver, malorážka, puška, brokovnice), tréninky za posledních 14 měsíců a výsledky několika cvičení, abyste viděli, jak vypadají záznamy, přehledy a pokrok. Vaše vlastní data zůstanou beze změny.</p>
       <button class="block ghost" id="demo-add">Vyplnit ukázková data</button>
     </div>
     <div class="card">
       <h3>Export a import</h3>
-      <p class="meta">Data se ukládají jen v tomto prohlížeči. Export vytvoří soubor JSON se zbraněmi i tréninky, který můžete zálohovat nebo později předat klubu.</p>
+      <p class="meta">Export vytvoří soubor JSON se zbraněmi i tréninky, který můžete zálohovat nebo později předat klubu.</p>
       <button class="block" id="export">Stáhnout export (JSON)</button>
       <label style="display:block;margin-top:12px">Import souboru JSON (záznamy se přidají, duplicity se přeskočí)</label>
       <input type="file" id="import" accept="application/json">
@@ -209,7 +218,9 @@ a{color:#7fd1b8}
 </nav>
 <button id="fab" class="hidden" aria-label="Nový trénink" title="Nový trénink">+</button>
 
+<script src="config.js"></script>
 <script src="drills.js"></script>
+<script src="cloud.js"></script>
 <script>
 const KEY = 'badguns.v1';
 const KINDS = ['pistole', 'revolver', 'puška', 'malorážka', 'brokovnice', 'jiné'];
@@ -222,9 +233,9 @@ if (!Array.isArray(data.results)) data.results = [];        // výsledky cvičen
 if (!Array.isArray(data.customDrills)) data.customDrills = [];
 if (!Array.isArray(data.favDrills)) data.favDrills = [];
 if (!Array.isArray(data.drillTypes)) data.drillTypes = [];   // vlastní typy cvičení
+if (!data.tomb || typeof data.tomb !== 'object') data.tomb = {};   // smazané záznamy (kvůli záloze)
 
 const $ = s => document.querySelector(s);
-const save = () => localStorage.setItem(KEY, JSON.stringify(data));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = n => Number(n).toLocaleString('cs-CZ');
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -313,7 +324,14 @@ function removeDemo() {
 $('#demo-add').onclick = addDemo;
 $('#demo-del').onclick = removeDemo;
 
+let curTab = 'stats';
+// překreslí aktuální obrazovku po stažení změn ze zálohy (formuláře nechá být)
+function rerender() {
+  updateDemoBar();
+  ({ stats: renderStats, list: renderList, drills: renderDrills, guns: renderGuns }[curTab] || (() => {}))();
+}
 function show(tab, keepForm) {
+  curTab = tab;
   updateDemoBar();
   document.querySelectorAll('section[id^="tab-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + tab));
   document.querySelectorAll('nav button, #gear').forEach(b => b.classList.toggle('active', b.dataset.tab === ({ new: 'list', drill: 'drills' }[tab] || tab)));
@@ -322,6 +340,7 @@ function show(tab, keepForm) {
   if (tab === 'new' && !keepForm) resetForm();
   if (tab === 'guns') { if (!keepForm) resetGunForm(); renderGuns(); }
   if (tab === 'stats') renderStats();
+  if (tab === 'data') renderCloudPanel();
   if (tab === 'drills') renderDrills();
   window.scrollTo(0, 0);
 }
@@ -904,6 +923,7 @@ swSetup();
 
 $('#fab').onclick = () => show('new');
 show('stats');
+cloudStartup();
 </script>
 </body>
 </html>
