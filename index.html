@@ -27,14 +27,17 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .stat span{color:var(--muted);font-size:12px}
 input,select,textarea{font:inherit;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin:4px 0 10px;background:var(--field);color:var(--ink)}
 label{font-size:13px;color:var(--muted)}
+.check{display:flex;align-items:center;gap:8px;margin:4px 0 10px}
+.check input{width:auto;margin:0}
 button{font:inherit;border:0;border-radius:8px;padding:10px 14px;background:var(--accent);color:#fff;cursor:pointer}
 button.ghost{background:var(--ghost);color:var(--ink)}
 button.danger{background:var(--danger)}
 button.block{width:100%;margin-top:6px}
+.actions{margin-top:10px;display:flex;gap:8px}
 .row{display:flex;gap:8px}
 .row>*{flex:1;min-width:0}
 .weapon{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px}
-.weapon input{margin-bottom:6px}
+.weapon input,.weapon select{margin-bottom:6px}
 .meta{color:var(--muted);font-size:13px}
 .tags{font-size:13px;margin-top:6px;color:var(--ink)}
 .bar-row{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0}
@@ -43,7 +46,7 @@ button.block{width:100%;margin-top:6px}
 .bar{flex:1;background:var(--line);border-radius:4px;height:10px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent)}
 nav{position:fixed;bottom:0;left:0;right:0;background:var(--header);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
-nav button{background:none;color:var(--muted);padding:6px 8px;font-size:13px}
+nav button{background:none;color:var(--muted);padding:6px 4px;font-size:13px}
 nav button.active{color:var(--accent);font-weight:600}
 .hidden{display:none}
 .banner{background:#3d2f0f;color:#ffd98a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
@@ -55,6 +58,7 @@ nav button.active{color:var(--accent);font-weight:600}
 
 <main>
   <div id="upd" class="banner hidden">Je k dispozici nová verze aplikace. <button id="upd-btn">Obnovit</button></div>
+
   <section id="tab-list">
     <div id="list"></div>
   </section>
@@ -82,6 +86,30 @@ nav button.active{color:var(--accent);font-weight:600}
     </form>
   </section>
 
+  <section id="tab-guns" class="hidden">
+    <form id="gform" class="card">
+      <h3 id="gform-title">Nová zbraň</h3>
+      <label>Název / model</label>
+      <input type="text" id="g-name" required placeholder="např. CZ Shadow 2">
+      <div class="row">
+        <div>
+          <label>Druh</label>
+          <select id="g-kind"></select>
+        </div>
+        <div>
+          <label>Ráže</label>
+          <input type="text" id="g-cal" placeholder="např. 9 mm Luger">
+        </div>
+      </div>
+      <label>Poznámka</label>
+      <input type="text" id="g-note" placeholder="např. sportovní, koupeno 2024">
+      <label class="check"><input type="checkbox" id="g-arch"> Vyřazená (nenabízí se v nových trénincích)</label>
+      <button type="submit" class="block" id="g-submit">Přidat zbraň</button>
+      <button type="button" class="ghost block hidden" id="g-cancel">Zrušit úpravu</button>
+    </form>
+    <div id="guns"></div>
+  </section>
+
   <section id="tab-stats" class="hidden">
     <label>Rok</label>
     <select id="year"></select>
@@ -91,7 +119,7 @@ nav button.active{color:var(--accent);font-weight:600}
   <section id="tab-data" class="hidden">
     <div class="card">
       <h3>Export a import</h3>
-      <p class="meta">Data se ukládají jen v tomto prohlížeči. Export vytvoří soubor JSON, který můžete zálohovat nebo později předat klubu.</p>
+      <p class="meta">Data se ukládají jen v tomto prohlížeči. Export vytvoří soubor JSON se zbraněmi i tréninky, který můžete zálohovat nebo později předat klubu.</p>
       <button class="block" id="export">Stáhnout export (JSON)</button>
       <label style="display:block;margin-top:12px">Import souboru JSON (záznamy se přidají, duplicity se přeskočí)</label>
       <input type="file" id="import" accept="application/json">
@@ -102,16 +130,19 @@ nav button.active{color:var(--accent);font-weight:600}
 <nav>
   <button data-tab="list" class="active">Záznamy</button>
   <button data-tab="new">Nový</button>
+  <button data-tab="guns">Zbraně</button>
   <button data-tab="stats">Přehledy</button>
   <button data-tab="data">Data</button>
 </nav>
 
 <script>
 const KEY = 'badguns.v1';
+const KINDS = ['pistole', 'revolver', 'puška', 'malorážka', 'brokovnice', 'jiné'];
 let data;
-try { data = JSON.parse(localStorage.getItem(KEY)) || { trainings: [] }; }
-catch { data = { trainings: [] }; }
+try { data = JSON.parse(localStorage.getItem(KEY)) || {}; }
+catch { data = {}; }
 if (!Array.isArray(data.trainings)) data.trainings = [];
+if (!Array.isArray(data.weapons)) data.weapons = [];
 
 const $ = s => document.querySelector(s);
 const save = () => localStorage.setItem(KEY, JSON.stringify(data));
@@ -119,30 +150,57 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const fmt = n => Number(n).toLocaleString('cs-CZ');
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const trainingTotal = t => t.weapons.reduce((s, w) => s + w.rounds, 0);
+const thisYear = () => String(new Date().getFullYear());
+// české tvary: 1 trénink, 2–4 tréninky, 5+ tréninků
+const plural = (n, one, few, many) => n === 1 ? one : (n >= 2 && n <= 4 ? few : many);
+
+/* ---------- Zbraně: pomocné funkce ---------- */
+const weaponById = id => id ? data.weapons.find(w => w.id === id) : null;
+const gunName = g => g.name + (g.caliber ? ' (' + g.caliber + ')' : '');
+// Popisek zbraně v tréninku: aktuální údaje z evidence, jinak uložený název
+const entryLabel = e => { const g = weaponById(e.weaponId); return gunName(g || e); };
+const roundsFor = (id, year) => data.trainings
+  .filter(t => !year || t.date.startsWith(year))
+  .reduce((s, t) => s + t.weapons.filter(e => e.weaponId === id).reduce((a, e) => a + e.rounds, 0), 0);
+const usageCount = id => data.trainings.filter(t => t.weapons.some(e => e.weaponId === id)).length;
+const sortedGuns = () => [...data.weapons].sort((a, b) => (!!a.archived - !!b.archived) || a.name.localeCompare(b.name, 'cs'));
 
 function show(tab, keepForm) {
   document.querySelectorAll('section[id^="tab-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + tab));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (tab === 'list') renderList();
   if (tab === 'new' && !keepForm) resetForm();
+  if (tab === 'guns') { if (!keepForm) resetGunForm(); renderGuns(); }
   if (tab === 'stats') renderStats();
+  window.scrollTo(0, 0);
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
 
 /* ---------- Nový trénink ---------- */
-function weaponRow(w = { name: '', caliber: '', rounds: '' }) {
+function weaponRow(e = {}) {
+  const known = weaponById(e.weaponId);
+  const offered = sortedGuns().filter(g => !g.archived || (known && g.id === known.id));
+  const sel = known ? known.id : ((e.name || !offered.length) ? '' : offered[0].id);
   const d = document.createElement('div');
   d.className = 'weapon';
   d.innerHTML = `
-    <input class="wn" placeholder="Zbraň (např. Glock 17)" value="${esc(w.name)}">
-    <div class="row">
-      <input class="wc" placeholder="Ráže (např. 9 mm)" value="${esc(w.caliber)}">
-      <input class="wr" type="number" min="0" inputmode="numeric" placeholder="Počet ran" value="${esc(w.rounds)}">
+    <select class="ws">
+      ${offered.map(g => `<option value="${esc(g.id)}"${g.id === sel ? ' selected' : ''}>${esc(gunName(g))}</option>`).join('')}
+      <option value=""${sel === '' ? ' selected' : ''}>Jiná (zadat ručně)</option>
+    </select>
+    <div class="manual">
+      <input class="wn" placeholder="Zbraň (např. Glock 17)" value="${esc(known ? '' : e.name)}">
+      <input class="wc" placeholder="Ráže (např. 9 mm)" value="${esc(known ? '' : e.caliber)}">
     </div>
+    <input class="wr" type="number" min="0" inputmode="numeric" placeholder="Počet ran" value="${esc(e.rounds)}">
     <button type="button" class="ghost block wdel">Odebrat zbraň</button>`;
+  const sync = () => d.querySelector('.manual').classList.toggle('hidden', d.querySelector('.ws').value !== '');
+  d.querySelector('.ws').onchange = sync;
+  sync();
   d.querySelector('.wdel').onclick = () => d.remove();
   $('#weapons').appendChild(d);
 }
+
 let editingId = null;
 function resetForm() {
   editingId = null;
@@ -158,13 +216,14 @@ function resetForm() {
 }
 $('#add-weapon').onclick = () => weaponRow();
 
-$('#form').onsubmit = e => {
-  e.preventDefault();
-  const weapons = [...document.querySelectorAll('#weapons .weapon')].map(d => ({
-    name: d.querySelector('.wn').value.trim(),
-    caliber: d.querySelector('.wc').value.trim(),
-    rounds: Math.max(0, parseInt(d.querySelector('.wr').value, 10) || 0)
-  })).filter(w => w.name || w.rounds);
+$('#form').onsubmit = ev => {
+  ev.preventDefault();
+  const weapons = [...document.querySelectorAll('#weapons .weapon')].map(d => {
+    const rounds = Math.max(0, parseInt(d.querySelector('.wr').value, 10) || 0);
+    const g = weaponById(d.querySelector('.ws').value);
+    if (g) return { weaponId: g.id, name: g.name, caliber: g.caliber, rounds };
+    return { name: d.querySelector('.wn').value.trim(), caliber: d.querySelector('.wc').value.trim(), rounds };
+  }).filter(e => e.rounds > 0 || (!e.weaponId && e.name));
   if (!weapons.length) { alert('Přidejte alespoň jednu zbraň s počtem ran.'); return; }
   const record = {
     id: editingId || uid(),
@@ -190,7 +249,7 @@ function startEdit(id) {
   $('#f-type').value = t.type;
   $('#f-note').value = t.note || '';
   $('#weapons').innerHTML = '';
-  t.weapons.forEach(w => weaponRow(w));
+  t.weapons.forEach(e => weaponRow(e));
   $('#form-title').textContent = 'Upravit trénink';
   $('#submit-btn').textContent = 'Uložit změny';
   $('#cancel-edit').classList.remove('hidden');
@@ -206,9 +265,9 @@ function renderList() {
     <div class="card">
       <h3>${esc(t.date)} · ${esc(t.place || 'bez místa')}</h3>
       <div class="meta">${esc(t.type)} · celkem <b>${fmt(trainingTotal(t))}</b> ran</div>
-      <div class="tags">${t.weapons.map(w => `${esc(w.name)}${w.caliber ? ' (' + esc(w.caliber) + ')' : ''}: ${fmt(w.rounds)}`).join(' · ')}</div>
+      <div class="tags">${t.weapons.map(e => `${esc(entryLabel(e))}: ${fmt(e.rounds)}`).join(' · ')}</div>
       ${t.note ? `<div class="meta" style="margin-top:6px">${esc(t.note)}</div>` : ''}
-      <div style="margin-top:10px;display:flex;gap:8px"><button class="ghost" data-edit="${esc(t.id)}">Upravit</button><button class="danger" data-del="${esc(t.id)}">Smazat</button></div>
+      <div class="actions"><button class="ghost" data-edit="${esc(t.id)}">Upravit</button><button class="danger" data-del="${esc(t.id)}">Smazat</button></div>
     </div>`).join('');
   box.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => startEdit(b.dataset.edit));
   box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
@@ -219,26 +278,140 @@ function renderList() {
   });
 }
 
+/* ---------- Evidence zbraní ---------- */
+$('#g-kind').innerHTML = KINDS.map(k => `<option>${k}</option>`).join('');
+let gunEditId = null;
+
+function resetGunForm() {
+  gunEditId = null;
+  $('#gform-title').textContent = 'Nová zbraň';
+  $('#g-submit').textContent = 'Přidat zbraň';
+  $('#g-cancel').classList.add('hidden');
+  $('#g-name').value = '';
+  $('#g-kind').value = 'pistole';
+  $('#g-cal').value = '';
+  $('#g-note').value = '';
+  $('#g-arch').checked = false;
+}
+$('#g-cancel').onclick = () => { resetGunForm(); renderGuns(); };
+
+$('#gform').onsubmit = ev => {
+  ev.preventDefault();
+  const g = {
+    id: gunEditId || uid(),
+    name: $('#g-name').value.trim(),
+    kind: $('#g-kind').value,
+    caliber: $('#g-cal').value.trim(),
+    note: $('#g-note').value.trim(),
+    archived: $('#g-arch').checked
+  };
+  if (!g.name) return;
+  if (gunEditId) {
+    data.weapons = data.weapons.map(x => x.id === gunEditId ? g : x);
+    // aktualizovat uložené názvy v trénincích, aby export odpovídal evidenci
+    data.trainings.forEach(t => t.weapons.forEach(e => { if (e.weaponId === g.id) { e.name = g.name; e.caliber = g.caliber; } }));
+  } else {
+    data.weapons.push(g);
+  }
+  save();
+  resetGunForm();
+  renderGuns();
+};
+
+function startGunEdit(id) {
+  const g = weaponById(id);
+  if (!g) return;
+  gunEditId = id;
+  $('#gform-title').textContent = 'Upravit zbraň';
+  $('#g-submit').textContent = 'Uložit změny';
+  $('#g-cancel').classList.remove('hidden');
+  $('#g-name').value = g.name;
+  $('#g-kind').value = KINDS.includes(g.kind) ? g.kind : 'jiné';
+  $('#g-cal').value = g.caliber || '';
+  $('#g-note').value = g.note || '';
+  $('#g-arch').checked = !!g.archived;
+  window.scrollTo(0, 0);
+}
+
+// Zbraně zapsané v trénincích ručně, které ještě nejsou v evidenci
+function unlinkedEntries() {
+  const m = new Map();
+  data.trainings.forEach(t => t.weapons.forEach(e => {
+    if (weaponById(e.weaponId) || !e.name) return;
+    const k = e.name.toLowerCase() + '|' + (e.caliber || '').toLowerCase();
+    if (!m.has(k)) m.set(k, { name: e.name, caliber: e.caliber || '' });
+  }));
+  return m;
+}
+
+function linkUnlinked() {
+  const m = unlinkedEntries();
+  m.forEach(v => {
+    const existing = data.weapons.find(g => g.name.toLowerCase() === v.name.toLowerCase() && (g.caliber || '').toLowerCase() === v.caliber.toLowerCase());
+    v.id = existing ? existing.id : uid();
+    if (!existing) data.weapons.push({ id: v.id, name: v.name, kind: 'jiné', caliber: v.caliber, note: '', archived: false });
+  });
+  data.trainings.forEach(t => t.weapons.forEach(e => {
+    if (weaponById(e.weaponId) || !e.name) return;
+    const v = m.get(e.name.toLowerCase() + '|' + (e.caliber || '').toLowerCase());
+    if (v) e.weaponId = v.id;
+  }));
+  save();
+  renderGuns();
+}
+
+function renderGuns() {
+  const y = thisYear();
+  const un = unlinkedEntries().size;
+  const banner = un ? `<div class="banner">V záznamech ${plural(un, 'je 1 zbraň, která není', `jsou ${un} zbraně, které nejsou`, `je ${un} zbraní, které nejsou`)} v evidenci. <button id="g-link">Převést do evidence</button></div>` : '';
+  const list = data.weapons.length ? sortedGuns().map(g => { const n = usageCount(g.id); return `
+    <div class="card"${g.archived ? ' style="opacity:.6"' : ''}>
+      <h3>${esc(g.name)}${g.archived ? ' <span class="meta">· vyřazená</span>' : ''}</h3>
+      <div class="meta">${esc(g.kind || 'jiné')} · ${esc(g.caliber || 'ráže neuvedena')}</div>
+      <div class="tags">Celkem <b>${fmt(roundsFor(g.id))}</b> ran · letos <b>${fmt(roundsFor(g.id, y))}</b> · ${n} ${plural(n, 'trénink', 'tréninky', 'tréninků')}</div>
+      ${g.note ? `<div class="meta" style="margin-top:6px">${esc(g.note)}</div>` : ''}
+      <div class="actions"><button class="ghost" data-gedit="${esc(g.id)}">Upravit</button><button class="danger" data-gdel="${esc(g.id)}">Smazat</button></div>
+    </div>`; }).join('') : '<p class="meta">Zatím žádné zbraně v evidenci.</p>';
+  $('#guns').innerHTML = banner + list;
+  const link = $('#g-link');
+  if (link) link.onclick = linkUnlinked;
+  $('#guns').querySelectorAll('[data-gedit]').forEach(b => b.onclick = () => startGunEdit(b.dataset.gedit));
+  $('#guns').querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => {
+    const id = b.dataset.gdel, n = usageCount(id);
+    const msg = n
+      ? `Zbraň je použita v ${n} ${plural(n, 'tréninku', 'trénincích', 'trénincích')}. Záznamy zůstanou s původním názvem, ale zbraň zmizí z evidence. Smazat? (Pokud ji už nepoužíváte, stačí ji označit jako vyřazenou.)`
+      : 'Smazat tuto zbraň z evidence?';
+    if (!confirm(msg)) return;
+    data.weapons = data.weapons.filter(g => g.id !== id);
+    data.trainings.forEach(t => t.weapons.forEach(e => { if (e.weaponId === id) delete e.weaponId; }));
+    if (gunEditId === id) resetGunForm();
+    save();
+    renderGuns();
+  });
+}
+
 /* ---------- Přehledy ---------- */
 $('#year').onchange = renderStats;
 
 function renderStats() {
-  const thisYear = String(new Date().getFullYear());
+  const cy = thisYear();
   const years = [...new Set(data.trainings.map(t => t.date.slice(0, 4)))].sort().reverse();
-  if (!years.includes(thisYear)) years.unshift(thisYear);
+  if (!years.includes(cy)) years.unshift(cy);
   const sel = $('#year');
   const prev = sel.value;
   sel.innerHTML = years.map(y => `<option>${y}</option>`).join('');
-  sel.value = years.includes(prev) ? prev : thisYear;
+  sel.value = years.includes(prev) ? prev : cy;
   const y = sel.value;
 
   const ts = data.trainings.filter(t => t.date.startsWith(y));
   const total = ts.reduce((s, t) => s + trainingTotal(t), 0);
 
-  const byWeapon = {};
-  ts.forEach(t => t.weapons.forEach(w => {
-    const k = w.name + (w.caliber ? ' ' + w.caliber : '');
-    byWeapon[k] = (byWeapon[k] || 0) + w.rounds;
+  const byWeapon = new Map();
+  ts.forEach(t => t.weapons.forEach(e => {
+    const k = weaponById(e.weaponId) ? e.weaponId : 'm:' + (e.name || '').toLowerCase() + '|' + (e.caliber || '').toLowerCase();
+    const cur = byWeapon.get(k) || { label: entryLabel(e), n: 0 };
+    cur.n += e.rounds;
+    byWeapon.set(k, cur);
   }));
 
   const months = Array(12).fill(0);
@@ -248,7 +421,7 @@ function renderStats() {
   $('#stats').innerHTML = `
     <div class="card summary">
       <div class="stat"><b>${fmt(total)}</b><span>ran za ${y}</span></div>
-      <div class="stat"><b>${ts.length}</b><span>tréninků</span></div>
+      <div class="stat"><b>${ts.length}</b><span>${plural(ts.length, 'trénink', 'tréninky', 'tréninků')}</span></div>
     </div>
     <div class="card">
       <h3>Podle měsíců</h3>
@@ -261,8 +434,8 @@ function renderStats() {
     </div>
     <div class="card">
       <h3>Podle zbraně</h3>
-      ${Object.entries(byWeapon).sort((a, b) => b[1] - a[1])
-        .map(([k, v]) => `<div class="tags">${esc(k)}: <b>${fmt(v)}</b></div>`).join('')
+      ${[...byWeapon.values()].sort((a, b) => b.n - a.n)
+        .map(v => `<div class="tags">${esc(v.label)}: <b>${fmt(v.n)}</b></div>`).join('')
         || '<p class="meta">Pro tento rok nejsou žádná data.</p>'}
     </div>`;
 }
@@ -277,22 +450,26 @@ $('#export').onclick = () => {
   URL.revokeObjectURL(a.href);
 };
 
-$('#import').onchange = async e => {
-  const f = e.target.files[0];
+$('#import').onchange = async ev => {
+  const f = ev.target.files[0];
   if (!f) return;
   try {
     const incoming = JSON.parse(await f.text());
     if (!Array.isArray(incoming.trainings)) throw new Error('neplatný formát souboru');
+    const wIds = new Set(data.weapons.map(g => g.id));
+    const addedW = (Array.isArray(incoming.weapons) ? incoming.weapons : [])
+      .filter(g => g && g.id && g.name && !wIds.has(g.id));
+    data.weapons.push(...addedW);
     const ids = new Set(data.trainings.map(t => t.id));
     const added = incoming.trainings.filter(t => t && t.id && !ids.has(t.id) && Array.isArray(t.weapons));
     data.trainings.push(...added);
     data.trainings.sort((a, b) => b.date.localeCompare(a.date));
     save();
-    alert(`Přidáno záznamů: ${added.length}`);
+    alert(`Přidáno tréninků: ${added.length}, zbraní: ${addedW.length}`);
   } catch (err) {
     alert('Import selhal: ' + err.message);
   }
-  e.target.value = '';
+  ev.target.value = '';
 };
 
 /* ---------- Aktualizace aplikace (service worker) ---------- */
