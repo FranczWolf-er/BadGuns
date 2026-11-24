@@ -76,8 +76,10 @@ a{color:#7fd1b8}
 .stack>div{display:flex;gap:2px;height:100%}
 .stack>div i{display:block;height:100%;min-width:2px}
 .stack>div i:last-child{border-radius:0 4px 4px 0}
-.mrow{cursor:pointer}
-.mdetail{font-size:13px;color:var(--muted);margin:2px 0 6px 34px}
+.mdetail{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12px;color:var(--muted);margin:1px 0 8px 34px}
+.mdetail span{white-space:nowrap}
+.mdetail i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
+.mdetail b{color:var(--ink);font-weight:600}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-bottom:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .cal-row{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px}
@@ -879,14 +881,14 @@ function renderStats() {
       <h3>Podle měsíců</h3>
       ${legend}
       ${months.map((m, i) => `
-        <div class="bar-row mrow" data-m="${i}">
+        <div class="bar-row">
           <span class="m">${String(i + 1).padStart(2, '0')}</span>
           <div class="bar stack"><div style="width:${(mTot[i] / max * 100).toFixed(1)}%">${order.filter(g => m.get(g)).map(g =>
             `<i style="flex:${m.get(g)};background:${groupInfo(g).color}" title="${esc(groupInfo(g).label)}: ${fmt(m.get(g))}"></i>`).join('')}</div></div>
           <span class="v">${fmt(mTot[i])}</span>
         </div>
-        <div class="mdetail hidden" id="md-${i}">${mTot[i] ? `<b>${MONTHS[i]}</b> · ` + order.filter(g => m.get(g)).map(g => `${esc(groupInfo(g).label)} ${fmt(m.get(g))}`).join(' · ') : `<b>${MONTHS[i]}</b> · žádné rány`}</div>`).join('')}
-      <div class="meta" style="margin-top:6px">Klepnutím na měsíc zobrazíte rozpis podle ráže.</div>
+        ${mTot[i] ? `<div class="mdetail" aria-label="${MONTHS[i]}">${order.filter(g => m.get(g)).map(g =>
+          `<span><i style="background:${groupInfo(g).color}"></i>${esc(groupInfo(g).label)} <b>${fmt(m.get(g))}</b></span>`).join('')}</div>` : ''}`).join('')}
     </div>
     <div class="card">
       <h3>Podle ráže</h3>
@@ -905,7 +907,6 @@ function renderStats() {
         .map(v => `<div class="cal-row"><span class="sw" style="background:${groupInfo(v.g).color}"></span><span class="cl">${esc(v.label)}</span><span class="cv"><b>${fmt(v.n)}</b></span></div>`).join('')
         || '<p class="meta">Pro tento rok nejsou žádná data.</p>'}
     </div>`;
-  $('#stats').querySelectorAll('.mrow').forEach(r => r.onclick = () => $('#md-' + r.dataset.m).classList.toggle('hidden'));
 }
 
 /* ---------- Data ---------- */
