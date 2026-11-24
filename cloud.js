@@ -25,8 +25,9 @@ async function s256(s) {
   return btoa(String.fromCharCode.apply(null, new Uint8Array(d))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 const authErr = () => { const e = new Error('auth'); e.auth = true; return e; };
-const getTok = () => { try { return JSON.parse(lsGet(TOK_KEY)); } catch (e) { return null; } };
-const setTok = t => lsSet(TOK_KEY, JSON.stringify(t));
+// token patří ke konkrétní registraci; po změně client ID se starý zahodí a je potřeba se přihlásit znovu
+const getTok = () => { try { const t = JSON.parse(lsGet(TOK_KEY)); return t && t.cid === CFG.clientId ? t : null; } catch (e) { return null; } };
+const setTok = t => lsSet(TOK_KEY, JSON.stringify(Object.assign({ cid: CFG.clientId }, t)));
 
 /* ---------- razítka změn a smazání ---------- */
 let snap = new Map(), snapPrefs = '';
