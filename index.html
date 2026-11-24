@@ -66,6 +66,10 @@ nav button.active{color:var(--accent);font-weight:600}
 .kv span{color:var(--muted)}
 .kv b{text-align:right;font-weight:500}
 .kv small{font-size:12px}
+.calhead{font-weight:600;font-size:14px;margin-top:10px}
+.wfoot{display:flex;gap:8px;align-items:center}
+.wfoot .wr{flex:1;margin:4px 0 6px}
+.wfoot .check{margin:0;white-space:nowrap;font-size:13px}
 ol.steps{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.5}
 .card p{font-size:14px;line-height:1.5;margin:6px 0}
 .chart{width:100%;height:auto;display:block}
@@ -140,7 +144,7 @@ a{color:#7fd1b8}
   </section>
 
   <section id="tab-guns" class="hidden">
-    <div class="seg" id="gmode"><button data-m="guns" class="on">Zbraně</button><button data-m="ammo">Náboje</button></div>
+    <div class="seg" id="gmode"><button data-m="guns" class="on">Zbraně</button><button data-m="ammo">Náboje</button><button data-m="reload">Přebíjení</button></div>
     <div id="guns-view">
     <form id="gform" class="card">
       <h3 id="gform-title">Nová zbraň</h3>
@@ -186,6 +190,49 @@ a{color:#7fd1b8}
         <button type="button" class="ghost block hidden" id="b-cancel">Zrušit úpravu</button>
       </form>
       <div id="ammo"></div>
+    </div>
+    <div id="reload-view" class="hidden">
+      <form id="rlform" class="card">
+        <h3 id="rlform-title">Dávka přebíjení</h3>
+        <div id="rl-copybox"><label>Podle předchozí dávky</label><select id="rl-copy"></select></div>
+        <div class="row">
+          <div><label>Datum</label><input type="date" id="rl-date" required></div>
+          <div><label>Ráže</label><input type="text" id="rl-cal" list="b-cals" required placeholder="např. 9 mm Luger"></div>
+        </div>
+        <label>Počet přebitých kusů</label>
+        <input type="number" id="rl-qty" min="1" step="1" inputmode="numeric" required>
+        <h3 style="margin-top:8px">Střela</h3>
+        <div class="row">
+          <div><label>Typ</label><input type="text" id="rl-bullet" placeholder="např. H&amp;N 124gr RN"></div>
+          <div><label>Cena za kus (Kč)</label><input type="number" id="rl-bulletPrice" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+        <h3 style="margin-top:8px">Prach</h3>
+        <div class="row">
+          <div><label>Typ</label><input type="text" id="rl-powder" placeholder="např. Vihtavuori N320"></div>
+          <div><label>Navážka (gr)</label><input type="number" id="rl-charge" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+        <div class="row">
+          <div><label>Cena balení (Kč)</label><input type="number" id="rl-powderPackPrice" min="0" step="0.01" inputmode="decimal"></div>
+          <div><label>Hmotnost balení (g)</label><input type="number" id="rl-powderPackGrams" min="0" step="1" inputmode="numeric" placeholder="500"></div>
+        </div>
+        <h3 style="margin-top:8px">Zápalka</h3>
+        <div class="row">
+          <div><label>Typ</label><input type="text" id="rl-primer" placeholder="např. S&amp;B Small Pistol"></div>
+          <div><label>Cena za kus (Kč)</label><input type="number" id="rl-primerPrice" min="0" step="0.01" inputmode="decimal"></div>
+        </div>
+        <h3 style="margin-top:8px">Nábojnice</h3>
+        <div class="row">
+          <div><label>Cena za kus (Kč)</label><input type="number" id="rl-casePrice" min="0" step="0.01" inputmode="decimal" placeholder="0 = sbírané"></div>
+          <div><label>Počet použití</label><input type="number" id="rl-caseUses" min="1" step="1" inputmode="numeric" placeholder="1"></div>
+        </div>
+        <label>Poznámka</label>
+        <input type="text" id="rl-note" placeholder="např. OAL 29,5 mm, nábojnice S&amp;B">
+        <div class="kv" style="margin-top:4px"><span>Cena jednoho náboje</span><b id="rl-unit">–</b></div>
+        <div class="meta" id="rl-break"></div>
+        <button type="submit" class="block" id="rl-submit" style="margin-top:10px">Přidat dávku</button>
+        <button type="button" class="ghost block hidden" id="rl-cancel">Zrušit úpravu</button>
+      </form>
+      <div id="reloads"></div>
     </div>
   </section>
 
@@ -267,6 +314,7 @@ if (!Array.isArray(data.customDrills)) data.customDrills = [];
 if (!Array.isArray(data.favDrills)) data.favDrills = [];
 if (!Array.isArray(data.drillTypes)) data.drillTypes = [];   // vlastní typy cvičení
 if (!Array.isArray(data.purchases)) data.purchases = [];   // nákupy nábojů
+if (!Array.isArray(data.reloads)) data.reloads = [];       // dávky přebíjení
 if (!data.tomb || typeof data.tomb !== 'object') data.tomb = {};   // smazané záznamy (kvůli záloze)
 
 const $ = s => document.querySelector(s);
@@ -290,7 +338,7 @@ const usageCount = id => data.trainings.filter(t => t.weapons.some(e => e.weapon
 const sortedGuns = () => [...data.weapons].sort((a, b) => (!!a.archived - !!b.archived) || a.name.localeCompare(b.name, 'cs'));
 
 /* ---------- Ukázková data ---------- */
-const hasDemo = () => data.weapons.some(g => g.demo) || data.purchases.some(p => p.demo) || data.trainings.some(t => t.demo) || data.results.some(r => r.demo);
+const hasDemo = () => data.weapons.some(g => g.demo) || data.purchases.some(p => p.demo) || data.reloads.some(r => r.demo) || data.trainings.some(t => t.demo) || data.results.some(r => r.demo);
 const updateDemoBar = () => $('#demo-bar').classList.toggle('hidden', !hasDemo());
 
 function addDemo() {
@@ -348,6 +396,14 @@ function addDemo() {
     .forEach(([caliber, qty, price, note], i) => { const d = new Date(today); d.setDate(d.getDate() - 400 + i * 60);
       data.purchases.push({ id: uid(), demo: true, date: d.toISOString().slice(0, 10), caliber, qty, price, note }); });
   data.purchases.sort((a, b) => b.date.localeCompare(a.date));
+  [['9 mm Luger', 1000, 'H&N 124gr RN', 2.9, 'Vihtavuori N320', 4.2, 1450, 500, 'S&B Small Pistol', 1.6, 0, 1, 'OAL 29,5 mm, sbírané nábojnice', 300],
+   ['.308 Win', 100, 'Sierra MatchKing 168gr', 14.5, 'Vihtavuori N140', 43.5, 1890, 500, 'CCI BR2 Large Rifle', 3.2, 18, 5, 'Lapua nábojnice, 5. použití', 200]]
+    .forEach(([caliber, qty, bullet, bulletPrice, powder, charge, powderPackPrice, powderPackGrams, primer, primerPrice, casePrice, caseUses, note, back]) => {
+      const d = new Date(today); d.setDate(d.getDate() - back);
+      data.reloads.push({ id: uid(), demo: true, date: d.toISOString().slice(0, 10), caliber, qty, bullet, bulletPrice, powder, charge, powderPackPrice, powderPackGrams, primer, primerPrice, casePrice, caseUses, note });
+    });
+  // část ran z ukázkových tréninků je z přebíjených nábojů
+  trainings.forEach((t, i) => t.weapons.forEach(e => { if (/9 mm|\.308/.test(e.caliber) && i % 3 === 0) e.reloaded = true; }));
   data.favDrills = [...new Set([...data.favDrills, 'bill', 'dot'])];
   data.weapons.push(...guns);
   data.trainings.push(...trainings);
@@ -364,6 +420,7 @@ function removeDemo() {
   data.results = data.results.filter(r => !r.demo);
   data.customDrills = data.customDrills.filter(d => !d.demo);
   data.purchases = data.purchases.filter(p => !p.demo);
+  data.reloads = data.reloads.filter(r => !r.demo);
   data.results.forEach(r => { if (ids.has(r.weaponId)) delete r.weaponId; });
   data.trainings.forEach(t => t.weapons.forEach(e => { if (ids.has(e.weaponId)) delete e.weaponId; }));
   save();
@@ -376,7 +433,7 @@ let curTab = 'stats';
 // překreslí aktuální obrazovku po stažení změn ze zálohy (formuláře nechá být)
 function rerender() {
   updateDemoBar();
-  ({ stats: renderStats, list: renderList, drills: renderDrills, guns: () => gunsMode === 'ammo' ? renderAmmo() : renderGuns() }[curTab] || (() => {}))();
+  ({ stats: renderStats, list: renderList, drills: renderDrills, guns: () => gunsMode === 'ammo' ? renderAmmo() : gunsMode === 'reload' ? renderReloads() : renderGuns() }[curTab] || (() => {}))();
 }
 function show(tab, keepForm) {
   curTab = tab;
@@ -386,7 +443,7 @@ function show(tab, keepForm) {
   $('#fab').classList.toggle('hidden', tab !== 'list');
   if (tab === 'list') renderList();
   if (tab === 'new' && !keepForm) resetForm();
-  if (tab === 'guns') { if (!keepForm) { resetGunForm(); resetBuyForm(); } setGunsMode(gunsMode); }
+  if (tab === 'guns') { if (!keepForm) { resetGunForm(); resetBuyForm(); resetReloadForm(); } setGunsMode(gunsMode); }
   if (tab === 'stats') renderStats();
   if (tab === 'data') renderCloudPanel();
   if (tab === 'drills') { if (!keepForm) setDrillMode(drillMode); renderDrills(); }
@@ -410,7 +467,10 @@ function weaponRow(e = {}) {
       <input class="wn" placeholder="Zbraň (např. Glock 17)" value="${esc(known ? '' : e.name)}">
       <input class="wc" placeholder="Ráže (např. 9 mm)" value="${esc(known ? '' : e.caliber)}">
     </div>
-    <input class="wr" type="number" min="0" inputmode="numeric" placeholder="Počet ran" value="${esc(e.rounds)}">
+    <div class="wfoot">
+      <input class="wr" type="number" min="0" inputmode="numeric" placeholder="Počet ran" value="${esc(e.rounds)}">
+      <label class="check"><input type="checkbox" class="wrl"${e.reloaded ? ' checked' : ''}> přebíjené</label>
+    </div>
     <button type="button" class="ghost block wdel">Odebrat zbraň</button>`;
   const sync = () => d.querySelector('.manual').classList.toggle('hidden', d.querySelector('.ws').value !== '');
   d.querySelector('.ws').onchange = sync;
@@ -439,8 +499,9 @@ $('#form').onsubmit = ev => {
   const weapons = [...document.querySelectorAll('#weapons .weapon')].map(d => {
     const rounds = Math.max(0, parseInt(d.querySelector('.wr').value, 10) || 0);
     const g = weaponById(d.querySelector('.ws').value);
-    if (g) return { weaponId: g.id, name: g.name, caliber: g.caliber, rounds };
-    return { name: d.querySelector('.wn').value.trim(), caliber: d.querySelector('.wc').value.trim(), rounds };
+    const rl = d.querySelector('.wrl').checked ? { reloaded: true } : {};
+    if (g) return { weaponId: g.id, name: g.name, caliber: g.caliber, rounds, ...rl };
+    return { name: d.querySelector('.wn').value.trim(), caliber: d.querySelector('.wc').value.trim(), rounds, ...rl };
   }).filter(e => e.rounds > 0 || (!e.weaponId && e.name));
   if (!weapons.length) { alert('Přidejte alespoň jednu zbraň s počtem ran.'); return; }
   const record = {
@@ -490,7 +551,7 @@ function renderList() {
     <div class="card">
       <h3>${esc(t.date)} · ${esc(t.place || 'bez místa')}</h3>
       <div class="meta">${esc(t.type)} · celkem <b>${fmt(trainingTotal(t))}</b> ran${(() => { const c = trainingCost(t, pm); return c.cost ? ' · ' + (c.missing ? 'min. ' : '') + fmtKc(c.cost) : ''; })()}</div>
-      <div class="tags">${t.weapons.map(e => `${esc(entryLabel(e))}: ${fmt(e.rounds)}`).join(' · ')}</div>
+      <div class="tags">${t.weapons.map(e => `${esc(entryLabel(e))}: ${fmt(e.rounds)}${e.reloaded ? ' <span class="pill" style="margin-left:2px">přebíjené</span>' : ''}`).join(' · ')}</div>
       ${t.note ? `<div class="meta" style="margin-top:6px">${esc(t.note)}</div>` : ''}
       <div class="actions"><button class="ghost" data-edit="${esc(t.id)}">Upravit</button><button class="danger" data-del="${esc(t.id)}">Smazat</button></div>
     </div>`).join('');
@@ -853,29 +914,41 @@ function renderDrill() {
 
 /* ---------- Náboje: nákupy, průměrná cena, finance ---------- */
 const fmtKc = (v, dec = 0) => v == null ? '–' : Number(v).toLocaleString('cs-CZ', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' Kč';
-// průměrná cena za náboj podle ráže = všechny nákupy dané ráže (vážený průměr: cena celkem / kusů celkem)
+// Přebíjení: cena jednoho náboje z komponent
+const GR_PER_G = 15.4324;   // 1 g = 15,4324 grainu
+const powderPerRound = r => r.charge > 0 && r.powderPackPrice > 0 && r.powderPackGrams > 0 ? r.charge / GR_PER_G * r.powderPackPrice / r.powderPackGrams : 0;
+const casePerRound = r => (r.casePrice || 0) / Math.max(1, r.caseUses || 1);
+const reloadUnit = r => (r.bulletPrice || 0) + (r.primerPrice || 0) + casePerRound(r) + powderPerRound(r);
+
+// průměrná cena za náboj podle ráže, zvlášť tovární (nákupy) a přebíjené (dávky); vážený průměr = cena celkem / kusů celkem
 function priceMap() {
-  const m = new Map();
-  data.purchases.forEach(p => {
-    const k = calKey(p.caliber); if (!k || !(p.qty > 0)) return;
-    const c = m.get(k) || { label: p.caliber.trim(), qty: 0, price: 0 };
-    c.qty += p.qty; c.price += p.price || 0; m.set(k, c);
-  });
-  // popisek ráže přednostně podle zbraní (např. „9 mm Luger“, ne „9mm luger“)
-  const names = new Map(knownCalibers().map(c => [calKey(c), c]));
-  m.forEach((c, k) => { c.avg = c.price / c.qty; c.label = names.get(k) || c.label; });
-  return m;
+  const names = new Map(knownCalibers().map(c => [calKey(c), c]));   // popisek ráže přednostně podle zbraní
+  const build = items => {
+    const m = new Map();
+    items.forEach(([caliber, qty, price]) => {
+      const k = calKey(caliber); if (!k || !(qty > 0)) return;
+      const c = m.get(k) || { label: caliber.trim(), qty: 0, price: 0 };
+      c.qty += qty; c.price += price || 0; m.set(k, c);
+    });
+    m.forEach((c, k) => { c.avg = c.price / c.qty; c.label = names.get(k) || c.label; });
+    return m;
+  };
+  return { f: build(data.purchases.map(p => [p.caliber, p.qty, p.price])), r: build(data.reloads.map(r => [r.caliber, r.qty, r.qty * reloadUnit(r)])) };
 }
-const avgPrice = (pm, caliber) => { const c = pm.get(calKey(caliber)); return c ? c.avg : null; };
+// cena rány pro položku tréninku: přebíjené podle dávek, tovární podle nákupů; když chybí, vezme druhý zdroj
+function unitPrice(pm, e) {
+  const k = calKey(entryCaliber(e)), a = (e.reloaded ? pm.r : pm.f).get(k) || (e.reloaded ? pm.f : pm.r).get(k);
+  return a ? a.avg : null;
+}
 // cena tréninku podle průměrných cen; missing = rány bez známé ceny
 function trainingCost(t, pm) {
   let cost = 0, missing = 0;
-  t.weapons.forEach(e => { const a = avgPrice(pm, entryCaliber(e)); if (a == null) missing += e.rounds; else cost += a * e.rounds; });
+  t.weapons.forEach(e => { const a = unitPrice(pm, e); if (a == null) missing += e.rounds; else cost += a * e.rounds; });
   return { cost, missing };
 }
 function knownCalibers() {
   const s = new Map();
-  [...data.weapons.map(g => g.caliber), ...data.purchases.map(p => p.caliber)].forEach(c => { if (c && c.trim() && !s.has(calKey(c))) s.set(calKey(c), c.trim()); });
+  [...data.weapons.map(g => g.caliber), ...data.purchases.map(p => p.caliber), ...data.reloads.map(r => r.caliber)].forEach(c => { if (c && c.trim() && !s.has(calKey(c))) s.set(calKey(c), c.trim()); });
   return [...s.values()].sort((a, b) => a.localeCompare(b, 'cs'));
 }
 
@@ -885,7 +958,8 @@ function setGunsMode(m) {
   $('#gmode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   $('#guns-view').classList.toggle('hidden', m !== 'guns');
   $('#ammo-view').classList.toggle('hidden', m !== 'ammo');
-  if (m === 'ammo') renderAmmo(); else renderGuns();
+  $('#reload-view').classList.toggle('hidden', m !== 'reload');
+  if (m === 'ammo') renderAmmo(); else if (m === 'reload') renderReloads(); else renderGuns();
 }
 $('#gmode').querySelectorAll('button').forEach(b => b.onclick = () => setGunsMode(b.dataset.m));
 
@@ -943,12 +1017,14 @@ function renderAmmo() {
   // vystříleno podle ráže (celkem) – pro orientační náklady
   const shot = new Map();
   data.trainings.forEach(t => t.weapons.forEach(e => { const k = calKey(entryCaliber(e)); if (k) shot.set(k, (shot.get(k) || 0) + e.rounds); }));
-  const cals = [...pm.entries()].sort((a, b) => a[1].label.localeCompare(b[1].label, 'cs'));
-  const noPrice = [...shot.keys()].filter(k => !pm.has(k));
+  const keys = [...new Set([...pm.f.keys(), ...pm.r.keys()])];
+  const cals = keys.map(k => [k, (pm.f.get(k) || pm.r.get(k)).label]).sort((a, b) => a[1].localeCompare(b[1], 'cs'));
+  const noPrice = [...shot.keys()].filter(k => !pm.f.has(k) && !pm.r.has(k));
+  const line = (c, what) => c ? `<div class="kv"><span>${what}<br><small>${fmt(c.qty)} ks za ${fmtKc(c.price)}</small></span><b>${fmtKc(c.avg, 2)}</b></div>` : '';
   const calCard = cals.length ? `<div class="card"><h3>Průměrná cena za náboj</h3>
-      ${cals.map(([k, c]) => `<div class="kv"><span>${esc(c.label)}<br><small>${fmt(c.qty)} ks za ${fmtKc(c.price)}</small></span><b>${fmtKc(c.avg, 2)}</b></div>`).join('')}
+      ${cals.map(([k, label]) => `<div class="calhead">${esc(label)}</div>${line(pm.f.get(k), 'tovární')}${line(pm.r.get(k), 'přebíjené')}`).join('')}
       ${noPrice.length ? `<p class="meta">Bez ceny (zatím žádný nákup): ${noPrice.map(k => esc(knownCalibers().find(c => calKey(c) === k) || k)).join(', ')}. Rány těchto ráží se do nákladů nezapočítají.</p>` : ''}
-      <p class="meta">Průměr je vážený ze všech nákupů dané ráže. Podle něj se počítají náklady v Přehledech a u tréninků.</p></div>`
+      <p class="meta">Průměr je vážený ze všech nákupů, u přebíjených ze všech dávek dané ráže. Podle něj se počítají náklady v Přehledech a u tréninků.</p></div>`
     : '<div class="card"><p class="meta" style="margin:0">Zatím žádné nákupy. Zapište nákup nábojů a aplikace spočítá průměrnou cenu za náboj a náklady na střelbu.</p></div>';
   const list = data.purchases.length ? `<div class="card"><h3>Nákupy</h3>${data.purchases.map(p => `
       <div class="res"><div><b>${fmt(p.qty)} ks ${esc(p.caliber)}</b> · ${fmtKc(p.price)}
@@ -962,6 +1038,98 @@ function renderAmmo() {
     if (buyEditId === b.dataset.bdel) resetBuyForm();
     save();
     renderAmmo();
+  });
+}
+
+/* ---------- Přebíjení ---------- */
+const RL_TEXT = ['bullet', 'powder', 'primer', 'note'];
+const RL_NUM = ['bulletPrice', 'charge', 'powderPackPrice', 'powderPackGrams', 'primerPrice', 'casePrice', 'caseUses'];
+let reloadEditId = null;
+const rlNum = id => { const v = ($('#rl-' + id).value || '').replace(',', '.'); return v === '' ? undefined : Math.max(0, parseFloat(v)); };
+function readReloadForm() {
+  const r = { date: $('#rl-date').value, caliber: $('#rl-cal').value.trim(), qty: Math.round(parseFloat($('#rl-qty').value)) };
+  RL_TEXT.forEach(k => { r[k] = $('#rl-' + k).value.trim(); });
+  RL_NUM.forEach(k => { const v = rlNum(k); if (v != null && !isNaN(v)) r[k] = v; });
+  return r;
+}
+function fillReloadForm(r, withQty) {
+  $('#rl-cal').value = r.caliber || '';
+  RL_TEXT.forEach(k => { $('#rl-' + k).value = r[k] || ''; });
+  RL_NUM.forEach(k => { $('#rl-' + k).value = r[k] != null ? r[k] : ''; });
+  if (withQty) { $('#rl-qty').value = r.qty || ''; $('#rl-date').value = r.date; }
+  syncReloadUnit();
+}
+function syncReloadUnit() {
+  const r = readReloadForm(), u = reloadUnit(r);
+  $('#rl-unit').textContent = u ? fmtKc(u, 2) : '–';
+  const parts = [['střela', r.bulletPrice || 0], ['prach', powderPerRound(r)], ['zápalka', r.primerPrice || 0], ['nábojnice', casePerRound(r)]].filter(([, v]) => v);
+  $('#rl-break').textContent = u ? parts.map(([n, v]) => `${n} ${fmtKc(v, 2)}`).join(' · ') + (r.qty > 0 ? ` · dávka celkem ${fmtKc(u * r.qty)}` : '') : 'Doplňte ceny komponent.';
+}
+$('#rlform').addEventListener('input', syncReloadUnit);
+function resetReloadForm() {
+  reloadEditId = null;
+  $('#rlform-title').textContent = 'Dávka přebíjení';
+  $('#rl-submit').textContent = 'Přidat dávku';
+  $('#rl-cancel').classList.add('hidden');
+  $('#rl-copybox').classList.toggle('hidden', !data.reloads.length);
+  $('#rl-copy').innerHTML = '<option value="">– nová receptura –</option>' + data.reloads.map(r => `<option value="${esc(r.id)}">${esc(r.date)} · ${esc(r.caliber)} · ${esc(r.bullet || '')}${r.charge ? ' · ' + fmtNum(r.charge) + ' gr ' + esc(r.powder || '') : ''}</option>`).join('');
+  fillReloadForm({}, false);
+  $('#rl-qty').value = '';
+  $('#rl-date').value = new Date().toISOString().slice(0, 10);
+  syncReloadUnit();
+}
+$('#rl-copy').onchange = () => { const r = data.reloads.find(x => x.id === $('#rl-copy').value); if (r) fillReloadForm(r, false); };
+$('#rl-cancel').onclick = () => { resetReloadForm(); renderReloads(); };
+$('#rlform').onsubmit = ev => {
+  ev.preventDefault();
+  const r = readReloadForm();
+  if (!r.caliber || !(r.qty > 0)) { alert('Vyplňte ráži a počet kusů.'); return; }
+  if (!reloadUnit(r) && !confirm('Není zadaná žádná cena komponent, náboj bude mít cenu 0 Kč. Uložit?')) return;
+  r.id = reloadEditId || uid();
+  if (reloadEditId) data.reloads = data.reloads.map(x => x.id === reloadEditId ? r : x);
+  else data.reloads.push(r);
+  data.reloads.sort((a, b) => b.date.localeCompare(a.date));
+  save();
+  resetReloadForm();
+  renderReloads();
+};
+function startReloadEdit(id) {
+  const r = data.reloads.find(x => x.id === id);
+  if (!r) return;
+  resetReloadForm();
+  reloadEditId = id;
+  $('#rlform-title').textContent = 'Upravit dávku';
+  $('#rl-submit').textContent = 'Uložit změny';
+  $('#rl-cancel').classList.remove('hidden');
+  $('#rl-copybox').classList.add('hidden');
+  fillReloadForm(r, true);
+  window.scrollTo(0, 0);
+}
+function renderReloads() {
+  $('#b-cals').innerHTML = knownCalibers().map(c => `<option value="${esc(c)}">`).join('');
+  if (!reloadEditId) $('#rl-copybox').classList.toggle('hidden', !data.reloads.length);
+  // vystříleno přebíjených podle ráže
+  const shot = new Map();
+  data.trainings.forEach(t => t.weapons.forEach(e => { if (e.reloaded) { const k = calKey(entryCaliber(e)); shot.set(k, (shot.get(k) || 0) + e.rounds); } }));
+  const made = new Map();
+  data.reloads.forEach(r => { const k = calKey(r.caliber); const c = made.get(k) || { label: r.caliber, qty: 0 }; c.qty += r.qty; made.set(k, c); });
+  const pm = priceMap();
+  const sum = made.size ? `<div class="card"><h3>Přehled přebíjení</h3>${[...made.entries()].map(([k, c]) => `
+      <div class="kv"><span>${esc((pm.r.get(k) || c).label)}<br><small>přebito ${fmt(c.qty)} ks · vystříleno ${fmt(shot.get(k) || 0)} ks</small></span><b>${fmtKc(pm.r.get(k).avg, 2)}/ks</b></div>`).join('')}
+      <p class="meta">Když u tréninku zaškrtnete „přebíjené“, rány se počítají za cenu přebíjených nábojů dané ráže.</p></div>`
+    : '<div class="card"><p class="meta" style="margin:0">Zatím žádné dávky. Zapište dávku přebíjení s cenami komponent a aplikace spočítá cenu jednoho náboje.</p></div>';
+  const list = data.reloads.length ? `<div class="card"><h3>Dávky</h3>${data.reloads.map(r => `
+      <div class="res"><div><b>${fmt(r.qty)} ks ${esc(r.caliber)}</b> · ${fmtKc(reloadUnit(r), 2)}/ks
+        <div class="meta">${esc(r.date)}${r.bullet ? ' · ' + esc(r.bullet) : ''}${r.charge ? ' · ' + fmtNum(r.charge) + ' gr' + (r.powder ? ' ' + esc(r.powder) : '') : ''}${r.primer ? ' · ' + esc(r.primer) : ''}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
+        <div style="display:flex;gap:6px"><button class="ghost" data-rledit="${esc(r.id)}">Upravit</button><button class="danger" data-rldel="${esc(r.id)}">Smazat</button></div></div>`).join('')}</div>` : '';
+  $('#reloads').innerHTML = sum + list;
+  $('#reloads').querySelectorAll('[data-rledit]').forEach(b => b.onclick = () => startReloadEdit(b.dataset.rledit));
+  $('#reloads').querySelectorAll('[data-rldel]').forEach(b => b.onclick = () => {
+    if (!confirm('Smazat tuto dávku?')) return;
+    data.reloads = data.reloads.filter(r => r.id !== b.dataset.rldel);
+    if (reloadEditId === b.dataset.rldel) resetReloadForm();
+    save();
+    renderReloads();
   });
 }
 
@@ -1009,23 +1177,28 @@ function renderStats() {
   // finance: náklady podle průměrné ceny ráže
   const pm = priceMap();
   const costCal = new Map(), costMonth = Array(12).fill(0), noPrice = new Map();
-  let cost = 0, missing = 0;
+  let cost = 0, missing = 0, relRounds = 0, relCost = 0;
   ts.forEach(t => t.weapons.forEach(e => {
-    const a = avgPrice(pm, entryCaliber(e)), g = groupOf(e);
+    if (e.reloaded) { relRounds += e.rounds; }
+    const a = unitPrice(pm, e), g = groupOf(e);
+    if (e.reloaded && a != null) relCost += a * e.rounds;
     if (a == null) { missing += e.rounds; const c = entryCaliber(e) || 'ráže neuvedena'; noPrice.set(calKey(c) || '?', c); return; }
     const v = a * e.rounds;
     cost += v; costCal.set(g, (costCal.get(g) || 0) + v); costMonth[Number(t.date.slice(5, 7)) - 1] += v;
   }));
   const bought = data.purchases.filter(p => p.date.startsWith(y));
-  const boughtKc = bought.reduce((s, p) => s + (p.price || 0), 0), boughtQty = bought.reduce((s, p) => s + p.qty, 0);
+  const madeY = data.reloads.filter(r => r.date.startsWith(y));
+  const boughtKc = bought.reduce((s, p) => s + (p.price || 0), 0) + madeY.reduce((s, r) => s + r.qty * reloadUnit(r), 0),
+        boughtQty = bought.reduce((s, p) => s + p.qty, 0) + madeY.reduce((s, r) => s + r.qty, 0);
   const priced = total - missing;
   const finance = (cost || boughtKc) ? `
     <div class="card">
       <h3>Finance ${y}</h3>
       <div class="summary" style="margin-bottom:8px">
         <div class="stat"><b>${fmtKc(cost)}</b><span>vystříleno${missing ? ' (bez ' + fmt(missing) + ' ran)' : ''}</span></div>
-        <div class="stat"><b>${fmtKc(boughtKc)}</b><span>nakoupeno · ${fmt(boughtQty)} ks</span></div>
+        <div class="stat"><b>${fmtKc(boughtKc)}</b><span>${madeY.length ? 'nakoupeno a přebito' : 'nakoupeno'} · ${fmt(boughtQty)} ks</span></div>
       </div>
+      ${relRounds ? `<div class="kv"><span>Z toho přebíjené</span><b>${fmt(relRounds)} ran · ${fmtKc(relCost)}</b></div>` : ''}
       <div class="kv"><span>Průměrná cena rány</span><b>${priced ? fmtKc(cost / priced, 2) : '–'}</b></div>
       <div class="kv"><span>Průměr na trénink</span><b>${ts.length ? fmtKc(cost / ts.length) : '–'}</b></div>
       <div class="kv"><span>Průměr na měsíc (se střelbou)</span><b>${costMonth.filter(v => v).length ? fmtKc(cost / costMonth.filter(v => v).length) : '–'}</b></div>
@@ -1095,7 +1268,7 @@ function renderStats() {
 
 /* ---------- Data ---------- */
 $('#export').onclick = () => {
-  const out = { weapons: data.weapons.filter(g => !g.demo), trainings: data.trainings.filter(t => !t.demo), purchases: data.purchases.filter(p => !p.demo),
+  const out = { weapons: data.weapons.filter(g => !g.demo), trainings: data.trainings.filter(t => !t.demo), purchases: data.purchases.filter(p => !p.demo), reloads: data.reloads.filter(r => !r.demo),
     results: data.results.filter(r => !r.demo), customDrills: data.customDrills, favDrills: data.favDrills, drillTypes: data.drillTypes };
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -1127,11 +1300,12 @@ $('#import').onchange = async ev => {
     };
     const nR = mergeById('results', r => r.drillId && r.date);
     const nP = mergeById('purchases', p => p.caliber && p.qty > 0);
+    const nL = mergeById('reloads', r => r.caliber && r.qty > 0);
     mergeById('customDrills', d => d.name);
     if (Array.isArray(incoming.drillTypes)) data.drillTypes = [...new Set([...data.drillTypes, ...incoming.drillTypes])];
     if (Array.isArray(incoming.favDrills)) data.favDrills = [...new Set([...data.favDrills, ...incoming.favDrills])];
     save();
-    alert(`Přidáno tréninků: ${added.length}, zbraní: ${addedW.length}, výsledků cvičení: ${nR}, nákupů: ${nP}`);
+    alert(`Přidáno tréninků: ${added.length}, zbraní: ${addedW.length}, výsledků cvičení: ${nR}, nákupů: ${nP}, dávek přebíjení: ${nL}`);
   } catch (err) {
     alert('Import selhal: ' + err.message);
   }
