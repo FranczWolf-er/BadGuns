@@ -76,6 +76,8 @@ ol.steps{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.5}
 .pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:var(--ghost);color:var(--ink);margin-left:6px}
 .res{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .res button{padding:4px 10px;font-size:13px}
+.res.sel{background:var(--ghost);margin:0 -8px;padding:8px;border-radius:8px}
+form.editing{outline:2px solid var(--accent)}
 a{color:#7fd1b8}
 .bar.stack{background:none;height:12px}
 .stack>div{display:flex;gap:2px;height:100%}
@@ -833,9 +835,10 @@ function progressChart(d, rs) {
   </svg><div class="meta">${d.primary === 'time' ? 'Čas, lepší výsledek je výš.' : (d.better === 'low' ? 'Méně je lépe, lepší výsledek je výš.' : 'Více je lépe.')} Žlutě nejlepší výsledek.</div>`;
 }
 
-let currentDrill = null;
+let currentDrill = null, editResultId = null;
 function openDrill(id) {
   currentDrill = id;
+  editResultId = null;
   show('drill');
   renderDrill();
 }
@@ -844,7 +847,10 @@ function renderDrill() {
   const d = drillById(currentDrill);
   if (!d) { show('drills'); return; }
   const rs = drillResults(d.id), best = bestOf(d, rs), last = rs[rs.length - 1];
-  const guns = sortedGuns().filter(g => !g.archived);
+  const editing = editResultId ? rs.find(r => r.id === editResultId) : null;
+  if (!editing) editResultId = null;
+  // při úpravě nabídnout i vyřazenou zbraň, pokud je u výsledku
+  const guns = sortedGuns().filter(g => !g.archived || (editing && g.id === editing.weaponId));
   const facts = d.facts ? `<div>${Object.entries(d.facts).map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>` : '';
   const comp = isComp(d);
   const rankField = comp && d.scoreLabel !== 'Umístění' ? `<div class="row"><div><label>Umístění, nepovinné</label><input type="number" id="r-rank" min="1" step="1" inputmode="numeric"></div><div><label>Počet závodníků</label><input type="number" id="r-of" min="1" step="1" inputmode="numeric"></div></div>`
@@ -876,39 +882,56 @@ function renderDrill() {
         <div class="stat"><b>${rs.length}</b><span>${comp ? plural(rs.length, 'závod', 'závody', 'závodů') : plural(rs.length, 'pokus', 'pokusy', 'pokusů')}</span></div></div>` : ''}
       ${progressChart(d, rs)}
     </div>
-    <form class="card" id="rform">
-      <h3>Zapsat výsledek</h3>
+    <form class="card${editing ? ' editing' : ''}" id="rform">
+      <h3>${editing ? 'Upravit výsledek' : 'Zapsat výsledek'}</h3>
       <div class="row"><div><label>Datum</label><input type="date" id="r-date" required value="${new Date().toISOString().slice(0, 10)}"></div>
         <div><label>Zbraň</label><select id="r-gun"><option value="">neuvedena</option>${guns.map(g => `<option value="${esc(g.id)}">${esc(gunName(g))}</option>`).join('')}</select></div></div>
       ${comp ? '<label>Název závodu / místo</label><input type="text" id="r-event" placeholder="např. Velká cena Ruzyně">' : ''}
       <div class="row">${comp ? (d.primary === 'time' ? timeField : scoreField.replace(', nepovinné', '')) : (d.primary === 'time' ? timeField + scoreField : scoreField + timeField)}</div>
       ${rankField}
       <label>Poznámka</label><input type="text" id="r-note" placeholder="${comp ? 'např. divize Production, 6 stage' : 'např. vzdálenost 10 m, nová mířidla'}">
-      <button type="submit" class="block">Uložit výsledek</button>
+      <button type="submit" class="block">${editing ? 'Uložit změny' : 'Uložit výsledek'}</button>
+      ${editing ? '<button type="button" class="ghost block" id="r-cancel">Zrušit úpravu</button>' : ''}
     </form>
     ${rs.length ? `<div class="card"><h3>Historie</h3>${[...rs].reverse().map(r => `
-      <div class="res"><div><b>${fmtPrim(d, primVal(d, r))}</b>${d.classes && r.time != null ? `<span class="pill">${esc(drillClass(d, r.time))}</span>` : ''}
+      <div class="res${r.id === editResultId ? ' sel' : ''}"><div><b>${fmtPrim(d, primVal(d, r))}</b>${d.classes && r.time != null ? `<span class="pill">${esc(drillClass(d, r.time))}</span>` : ''}
         <div class="meta">${esc(r.date)}${r.event ? ' · ' + esc(r.event) : ''}${comp ? placeStr(r) : ''}${!comp && d.primary === 'time' && r.score != null ? ' · ' + esc(d.scoreLabel || '') + ' ' + fmtNum(r.score) + (d.scoreMax ? '/' + d.scoreMax : '') : ''}${!comp && d.primary === 'score' && r.time != null ? ' · ' + fmtNum(r.time) + ' s' : ''}${weaponById(r.weaponId) ? ' · ' + esc(weaponById(r.weaponId).name) : ''}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
-        <button class="danger" data-rdel="${esc(r.id)}">Smazat</button></div>`).join('')}</div>` : ''}
+        <div style="display:flex;gap:6px"><button class="ghost" data-redit="${esc(r.id)}">Upravit</button><button class="danger" data-rdel="${esc(r.id)}">Smazat</button></div></div>`).join('')}</div>` : ''}
     ${d.custom ? `<button class="danger block" id="d-del">${comp ? 'Smazat typ závodu' : 'Smazat vlastní cvičení'}</button>` : ''}`;
   $('#d-back').onclick = () => show('drills', true);
   $('#d-fav').onclick = () => { toggleFav(d.id); renderDrill(); };
-  const lastGun = [...data.results].reverse().find(r => r.drillId === d.id && weaponById(r.weaponId));
-  if (lastGun && guns.some(g => g.id === lastGun.weaponId)) $('#r-gun').value = lastGun.weaponId;
+  const setVal = (id, v) => { const el = $(id); if (el) el.value = v == null ? '' : v; };
+  if (editing) {
+    setVal('#r-date', editing.date); setVal('#r-gun', weaponById(editing.weaponId) ? editing.weaponId : '');
+    setVal('#r-time', editing.time); setVal('#r-score', editing.score); setVal('#r-note', editing.note);
+    setVal('#r-event', editing.event); setVal('#r-rank', editing.rank); setVal('#r-of', editing.of);
+    $('#r-cancel').onclick = () => { editResultId = null; renderDrill(); };
+  } else {
+    const lastGun = [...data.results].reverse().find(r => r.drillId === d.id && weaponById(r.weaponId));
+    if (lastGun && guns.some(g => g.id === lastGun.weaponId)) $('#r-gun').value = lastGun.weaponId;
+  }
   $('#rform').onsubmit = ev => {
     ev.preventDefault();
     const num = id => { const el = $(id); if (!el) return undefined; const v = el.value.replace(',', '.'); return v === '' ? undefined : Math.max(0, parseFloat(v)); };
-    const r = { id: uid(), ts: Date.now(), drillId: d.id, date: $('#r-date').value, time: num('#r-time'), score: num('#r-score'),
+    const r = { id: editing ? editing.id : uid(), ts: editing ? editing.ts : Date.now(), drillId: d.id, date: $('#r-date').value, time: num('#r-time'), score: num('#r-score'),
       weaponId: $('#r-gun').value || undefined, note: $('#r-note').value.trim() };
     if (comp) { r.event = $('#r-event').value.trim() || undefined; if ($('#r-rank')) r.rank = num('#r-rank'); r.of = num('#r-of'); }
     if (primVal(d, r) == null || isNaN(primVal(d, r))) { alert('Vyplňte hlavní výsledek.'); return; }
-    data.results.push(r);
+    if (editing) data.results = data.results.map(x => x.id === editing.id ? Object.assign({}, x.demo ? { demo: true } : {}, r) : x);
+    else data.results.push(r);
+    editResultId = null;
     save();
     renderDrill();
   };
+  $('#drill').querySelectorAll('[data-redit]').forEach(b => b.onclick = () => {
+    editResultId = b.dataset.redit;
+    renderDrill();
+    $('#rform').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   $('#drill').querySelectorAll('[data-rdel]').forEach(b => b.onclick = () => {
     if (!confirm('Smazat tento výsledek?')) return;
     data.results = data.results.filter(r => r.id !== b.dataset.rdel);
+    if (editResultId === b.dataset.rdel) editResultId = null;
     save();
     renderDrill();
   });
