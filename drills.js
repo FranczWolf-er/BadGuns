@@ -55,7 +55,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/01/dot-torture/'
   },
   {
-    id: 'card', type: 'Pistole', name: '3×5 Card Drill', primary: 'score', scoreLabel: 'Nejdelší splněná vzdálenost (m)', better: 'high',
+    id: 'card', type: 'Pistole', name: '3×5 Card Drill', primary: 'score', scoreLabel: 'Nejdelší splněná vzdálenost (m)', better: 'high', unit: ' m',
     summary: '6 ran na kartičku 7,6 × 12,7 cm, postupně až do 13,7 m.',
     facts: { 'Vzdálenosti': '2,7 · 4,5 · 6,4 · 9,1 · 13,7 m', 'Terč': 'kartička 7,6 × 12,7 cm (3 × 5 palců)', 'Náboje': '6 na každou vzdálenost', 'Čas': 'bez limitu, vlastním tempem' },
     steps: ['Začnete na nejkratší vzdálenosti.', 'Vystřelíte 6 ran s důrazem na přesnost.', 'Když jsou všechny zásahy na kartičce, posunete se na další vzdálenost.', 'U zbraně SA/DA střídejte DA, SA, DA, SA, DA, SA.'],

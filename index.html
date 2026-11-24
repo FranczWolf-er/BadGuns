@@ -380,10 +380,18 @@ function addDemo() {
       data.results.push({ id: uid(), demo: true, drillId, date: d.toISOString().slice(0, 10), weaponId: guns[gun].id, note: '', ...extra(v) });
     }
   };
-  demoRes('bill', 9, 5.2, 3.4, 0, v => ({ time: +v.toFixed(2), score: 6 }));
-  demoRes('elpres', 7, 12.8, 7.1, 1, v => ({ time: +v.toFixed(2), score: 12 }));
-  demoRes('dot', 6, 38, 49, 0, v => ({ score: Math.min(50, Math.round(v)) }));
-  demoRes('test', 5, 71, 92, 1, v => ({ score: Math.min(100, Math.round(v)), time: 10 }));
+  // u každého cvičení několik pokusů se zlepšujícím se trendem
+  const CARD_D = [2.7, 4.5, 6.4, 9.1, 13.7];
+  demoRes('bill', 12, 5.2, 3.3, 0, v => ({ time: +v.toFixed(2), score: 6 }));
+  demoRes('elpres', 9, 12.8, 6.9, 1, v => ({ time: +v.toFixed(2), score: 12 }));
+  demoRes('fast', 8, 9.6, 5.6, 1, v => ({ time: +v.toFixed(2), score: v > 7 ? 1 : 0 }));
+  demoRes('dot', 8, 36, 50, 0, v => ({ score: Math.min(50, Math.round(v)) }));
+  demoRes('card', 7, 0, 4, 0, v => ({ score: CARD_D[Math.max(0, Math.min(4, Math.round(v)))] }));
+  demoRes('onefive', 7, 5.4, 3.1, 4, v => ({ time: +v.toFixed(2), score: 15 }));
+  demoRes('reload1', 8, 3.6, 2.1, 1, v => ({ time: +v.toFixed(2), score: 2 }));
+  demoRes('moz', 8, 2.7, 1.5, 0, v => ({ time: +v.toFixed(2), score: 3 }));
+  demoRes('test', 7, 68, 94, 1, v => ({ score: Math.min(100, Math.round(v)), time: 10 }));
+  demoRes('dummy', 6, 6, 0, 0, v => ({ score: Math.max(0, Math.round(v)) }));
   const compId = 'z-' + uid();
   data.customDrills.push({ id: compId, demo: true, custom: true, kind: 'comp', name: 'Klubový závod – pistole 25 m',
     desc: '30 ran na terč 50/20 ze 25 m, 10 ran přesná + 20 ran rychlá střelba. Hodnotí se součet bodů.',
@@ -391,9 +399,13 @@ function addDemo() {
   [['1. kolo', 231, 14, 22], ['2. kolo', 244, 9, 25], ['3. kolo', 252, 7, 21], ['4. kolo', 263, 4, 24], ['5. kolo', 258, 5, 23]]
     .forEach(([ev, pts, rank, of], i) => { const d = new Date(today); d.setMonth(d.getMonth() - 10 + i * 2); d.setDate(12);
       if (d < today) data.results.push({ id: uid(), demo: true, drillId: compId, date: d.toISOString().slice(0, 10), event: ev, score: pts, rank, of, weaponId: guns[0].id, note: '' }); });
-  [['9 mm Luger', 1000, 7900, 'S&B FMJ 124gr'], ['9 mm Luger', 500, 4250, 'Geco FMJ'], ['.22 LR', 2000, 4600, 'CCI Standard'],
-   ['.308 Win', 100, 3900, 'Sellier & Bellot SP'], ['12/76', 250, 2375, 'Rottweil trap 24 g'], ['.357 Mag', 100, 1690, 'S&B FMJ']]
-    .forEach(([caliber, qty, price, note], i) => { const d = new Date(today); d.setDate(d.getDate() - 400 + i * 60);
+  // nákupy rozložené přes 14 měsíců, ceny se mírně mění
+  [[420, '9 mm Luger', 1000, 7900, 'S&B FMJ 124gr, Zbrojnice'], [400, '.357 Mag', 100, 1690, 'S&B FMJ 158gr'], [380, '.22 LR', 2000, 4600, 'CCI Standard'],
+   [350, '12/76', 250, 2375, 'Rottweil trap 24 g'], [300, '.308 Win', 100, 3900, 'S&B SP 180gr'], [260, '9 mm Luger', 500, 4250, 'Geco FMJ 124gr'],
+   [220, '.22 LR', 1000, 2490, 'SK Standard Plus'], [180, '12/76', 500, 4550, 'Fiocchi trap 24 g, akce'], [150, '9 mm Luger', 1000, 8450, 'S&B FMJ 124gr, Zbrojnice'],
+   [110, '.308 Win', 60, 2580, 'Lapua Scenar 167gr'], [70, '.22 LR', 500, 1450, 'Eley Club'], [40, '9 mm Luger', 1000, 8200, 'Magtech FMJ 124gr'],
+   [15, '12/76', 250, 2450, 'Rottweil trap 24 g']]
+    .forEach(([back, caliber, qty, price, note]) => { const d = new Date(today); d.setDate(d.getDate() - back);
       data.purchases.push({ id: uid(), demo: true, date: d.toISOString().slice(0, 10), caliber, qty, price, note }); });
   data.purchases.sort((a, b) => b.date.localeCompare(a.date));
   [['9 mm Luger', 1000, 'H&N 124gr RN', 2.9, 'Vihtavuori N320', 4.2, 1450, 500, 'S&B Small Pistol', 1.6, 0, 1, 'OAL 29,5 mm, sbírané nábojnice', 300],
