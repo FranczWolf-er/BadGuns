@@ -5,9 +5,9 @@ Jednoduchá webová aplikace pro evidenci tréninků na střelnici a počtu vyst
 - Každý trénink je jeden záznam (datum, místo, typ, poznámka).
 - Jeden trénink může obsahovat více zbraní, každá s vlastním počtem ran.
 - Evidence zbraní (název, druh, ráže, poznámka, vyřazení) s celkovým a letošním počtem ran.
-- Přehledy: celkem ran za rok, po měsících a po zbraních.
+- Přehledy: celkem ran za rok, graf po měsících barevně rozdělený podle ráže, přehled podle ráže a podle zbraně.
 - Export a import dat ve formátu JSON.
-- Střelecká cvičení (Bill Drill, El Presidente, Dot Torture…) s teorií, zápisem výsledků, grafem pokroku a oblíbenými; lze přidat vlastní cvičení.
+- Střelecká cvičení (Bill Drill, El Presidente, Dot Torture…) s teorií, zápisem výsledků, grafem pokroku a oblíbenými; typy cvičení s filtrem, lze přidat vlastní cvičení i vlastní typ.
 - Ukázková data pro vyzkoušení (do exportu se nedostanou, jdou smazat jedním tlačítkem).
 - Tmavý režim, instalace na plochu a upozornění na novou verzi.
 

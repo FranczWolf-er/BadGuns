@@ -69,6 +69,22 @@ ol.steps{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.5}
 .res{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .res button{padding:4px 10px;font-size:13px}
 a{color:#7fd1b8}
+.bar.stack{background:none;height:12px}
+.stack>div{display:flex;gap:2px;height:100%}
+.stack>div i{display:block;height:100%;min-width:2px}
+.stack>div i:last-child{border-radius:0 4px 4px 0}
+.mrow{cursor:pointer}
+.mdetail{font-size:13px;color:var(--muted);margin:2px 0 6px 34px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.cal-row{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px}
+.cal-row .sw{width:10px;height:10px;border-radius:2px;flex:none}
+.cal-row .cl{flex:1;min-width:0}
+.bar.thin{height:6px;margin:4px 0 2px 18px}
+.bar.thin i{border-radius:0 3px 3px 0}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:4px}
+.chips button{flex:none;background:var(--ghost);color:var(--ink);padding:6px 12px;border-radius:16px;font-size:13px}
+.chips button.on{background:var(--accent);color:#fff}
 .hidden{display:none!important}
 .banner{background:#3d2f0f;color:#ffd98a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
 .banner button{margin-left:8px;padding:6px 12px}
@@ -135,9 +151,13 @@ a{color:#7fd1b8}
   </section>
 
   <section id="tab-drills" class="hidden">
-    <div id="drills"></div>
-    <form id="cdform" class="card">
+    <div class="chips" id="dtypes"></div>
+    <button class="ghost block" id="cd-open" style="margin:0 0 12px">+ Vlastní cvičení</button>
+    <form id="cdform" class="card hidden">
       <h3>Vlastní cvičení</h3>
+      <label>Typ cvičení</label>
+      <select id="cd-type"></select>
+      <input type="text" id="cd-newtype" class="hidden" placeholder="Název nového typu, např. Dynamická střelba">
       <label>Název</label>
       <input type="text" id="cd-name" required placeholder="např. Klubová disciplína 25 m">
       <label>Popis (jak se střílí)</label>
@@ -149,7 +169,9 @@ a{color:#7fd1b8}
         <option value="low">počet chyb (méně je lépe)</option>
       </select>
       <button type="submit" class="block">Přidat cvičení</button>
+      <button type="button" class="ghost block" id="cd-close">Zavřít</button>
     </form>
+    <div id="drills"></div>
   </section>
 
   <section id="tab-drill" class="hidden">
@@ -166,7 +188,7 @@ a{color:#7fd1b8}
     <h2 style="margin:4px 2px 12px;font-size:18px">Nastavení</h2>
     <div class="card">
       <h3>Ukázková data</h3>
-      <p class="meta">Vyplní 4 vzorové zbraně, tréninky za posledních 14 měsíců a výsledky několika cvičení, abyste viděli, jak vypadají záznamy, přehledy a pokrok. Vaše vlastní data zůstanou beze změny.</p>
+      <p class="meta">Vyplní 6 vzorových zbraní (pistole, revolver, malorážka, puška, brokovnice), tréninky za posledních 14 měsíců a výsledky několika cvičení, abyste viděli, jak vypadají záznamy, přehledy a pokrok. Vaše vlastní data zůstanou beze změny.</p>
       <button class="block ghost" id="demo-add">Vyplnit ukázková data</button>
     </div>
     <div class="card">
@@ -199,6 +221,7 @@ if (!Array.isArray(data.weapons)) data.weapons = [];
 if (!Array.isArray(data.results)) data.results = [];        // výsledky cvičení
 if (!Array.isArray(data.customDrills)) data.customDrills = [];
 if (!Array.isArray(data.favDrills)) data.favDrills = [];
+if (!Array.isArray(data.drillTypes)) data.drillTypes = [];   // vlastní typy cvičení
 
 const $ = s => document.querySelector(s);
 const save = () => localStorage.setItem(KEY, JSON.stringify(data));
@@ -231,7 +254,9 @@ function addDemo() {
     { name: 'CZ Shadow 2', kind: 'pistole', caliber: '9 mm Luger', note: 'sportovní' },
     { name: 'Glock 17', kind: 'pistole', caliber: '9 mm Luger', note: '' },
     { name: 'CZ 457', kind: 'malorážka', caliber: '.22 LR', note: 'puškohled 3–9×' },
-    { name: 'Ruger GP100', kind: 'revolver', caliber: '.357 Mag', note: 'nepoužívám', archived: true }
+    { name: 'Ruger GP100', kind: 'revolver', caliber: '.357 Mag', note: 'nepoužívám', archived: true },
+    { name: 'CZ 600 Alpha', kind: 'puška', caliber: '.308 Win', note: 'lovecká, puškohled 2,5–15×' },
+    { name: 'Beretta 1301', kind: 'brokovnice', caliber: '12/76', note: 'brokové střelnice, asfaltové holuby' }
   ].map(g => ({ id: uid(), archived: false, demo: true, ...g }));
   const places = ['Střelnice Ruzyně', 'Střelnice Hostivice', 'Střelnice Kladno'];
   let seed = 7;
@@ -240,8 +265,8 @@ function addDemo() {
   const trainings = [];
   for (let back = 0; back < 430; back += 7 + rnd(14)) {
     const d = new Date(today); d.setDate(d.getDate() - back - 1);
-    const active = back > 200 ? [0, 1, 3] : [0, 1, 2];           // revolver jen ve starších záznamech
-    const n = 1 + rnd(2);
+    const active = back > 200 ? [0, 1, 3, 4, 5] : [0, 1, 2, 4, 5];   // revolver jen ve starších záznamech
+    const n = 1 + rnd(3);
     const used = [...new Set(Array.from({ length: n }, () => active[rnd(active.length)]))];
     const comp = rnd(8) === 0;
     trainings.push({
@@ -251,7 +276,7 @@ function addDemo() {
       type: comp ? 'závod' : 'trénink',
       note: comp ? 'Klubový závod' : '',
       weapons: used.map(i => ({ weaponId: guns[i].id, name: guns[i].name, caliber: guns[i].caliber,
-        rounds: (guns[i].kind === 'malorážka' ? 50 : 25) * (1 + rnd(4)) }))
+        rounds: ({ 'malorážka': 50, 'puška': 10, 'brokovnice': 25 }[guns[i].kind] || 25) * (1 + rnd(4)) }))
     });
   }
   // výsledky cvičení se zlepšujícím se trendem
@@ -546,17 +571,38 @@ function toggleFav(id) {
   save();
 }
 
+let drillFilter = 'Vše';
+const drillType = d => d.type || 'Ostatní';
+const allTypes = () => [...new Set([...DRILL_TYPES, ...data.drillTypes, ...allDrills().map(drillType)])];
+function renderTypeChips() {
+  const used = new Set(allDrills().map(drillType));
+  const types = ['Vše', '★ Oblíbená', ...allTypes().filter(t => used.has(t))];
+  if (!types.includes(drillFilter)) drillFilter = 'Vše';
+  $('#dtypes').innerHTML = types.map(t => `<button data-t="${esc(t)}" class="${t === drillFilter ? 'on' : ''}">${esc(t)}</button>`).join('');
+  $('#dtypes').querySelectorAll('button').forEach(b => b.onclick = () => { drillFilter = b.dataset.t; renderDrills(); });
+}
+function fillTypeSelect() {
+  $('#cd-type').innerHTML = allTypes().map(t => `<option>${esc(t)}</option>`).join('') + '<option value="__new">+ Nový typ…</option>';
+  $('#cd-newtype').classList.add('hidden');
+}
+$('#cd-type').onchange = () => $('#cd-newtype').classList.toggle('hidden', $('#cd-type').value !== '__new');
+$('#cd-open').onclick = () => { fillTypeSelect(); $('#cdform').classList.remove('hidden'); $('#cd-open').classList.add('hidden'); $('#cd-name').focus(); };
+$('#cd-close').onclick = () => { $('#cdform').classList.add('hidden'); $('#cd-open').classList.remove('hidden'); };
+
 function renderDrills() {
-  const list = allDrills().map((d, i) => ({ d, i })).sort((a, b) => (isFav(b.d.id) - isFav(a.d.id)) || a.i - b.i);
+  renderTypeChips();
+  const list = allDrills().map((d, i) => ({ d, i }))
+    .filter(({ d }) => drillFilter === 'Vše' || (drillFilter === '★ Oblíbená' ? isFav(d.id) : drillType(d) === drillFilter))
+    .sort((a, b) => (isFav(b.d.id) - isFav(a.d.id)) || a.i - b.i);
   $('#drills').innerHTML = list.map(({ d }) => {
     const rs = drillResults(d.id), last = rs[rs.length - 1], best = bestOf(d, rs);
     return `<div class="card drill" data-open="${esc(d.id)}">
-      <div class="dhead"><h3>${esc(d.name)}${d.custom ? '<span class="pill">vlastní</span>' : ''}</h3>
+      <div class="dhead"><h3>${esc(d.name)}<span class="pill">${esc(drillType(d))}</span>${d.custom ? '<span class="pill">vlastní</span>' : ''}</h3>
         <button class="star${isFav(d.id) ? ' on' : ''}" data-fav="${esc(d.id)}" aria-label="Oblíbené">${isFav(d.id) ? '★' : '☆'}</button></div>
       <div class="meta">${esc(d.summary || d.desc || '')}</div>
       ${rs.length ? `<div class="tags">Nejlepší <b>${fmtPrim(d, best)}</b> · poslední ${fmtPrim(d, last && primVal(d, last))} · ${rs.length} ${plural(rs.length, 'pokus', 'pokusy', 'pokusů')}</div>` : ''}
     </div>`;
-  }).join('');
+  }).join('') || '<p class="meta">V tomto filtru nejsou žádná cvičení.</p>';
   $('#drills').querySelectorAll('[data-fav]').forEach(b => b.onclick = ev => { ev.stopPropagation(); toggleFav(b.dataset.fav); renderDrills(); });
   $('#drills').querySelectorAll('[data-open]').forEach(c => c.onclick = () => openDrill(c.dataset.open));
 }
@@ -566,13 +612,21 @@ $('#cdform').onsubmit = ev => {
   const name = $('#cd-name').value.trim();
   if (!name) return;
   const p = $('#cd-prim').value;
+  let type = $('#cd-type').value;
+  if (type === '__new') {
+    type = $('#cd-newtype').value.trim();
+    if (!type) { alert('Zadejte název nového typu.'); return; }
+    if (!allTypes().includes(type)) data.drillTypes.push(type);
+  }
   data.customDrills.push({
-    id: 'c-' + uid(), custom: true, name, desc: $('#cd-desc').value.trim(),
+    id: 'c-' + uid(), custom: true, name, type, desc: $('#cd-desc').value.trim(),
     primary: p === 'time' ? 'time' : 'score', better: p === 'time' ? undefined : p,
     scoreLabel: p === 'time' ? 'Zásahy' : (p === 'low' ? 'Počet chyb' : 'Body / zásahy')
   });
   save();
-  $('#cd-name').value = ''; $('#cd-desc').value = '';
+  $('#cd-name').value = ''; $('#cd-desc').value = ''; $('#cd-newtype').value = '';
+  $('#cd-close').click();
+  drillFilter = type;
   renderDrills();
 };
 
@@ -629,7 +683,7 @@ function renderDrill() {
     <div class="card">
       <div class="dhead"><h3 style="font-size:20px">${esc(d.name)}</h3>
         <button class="star${isFav(d.id) ? ' on' : ''}" id="d-fav" aria-label="Oblíbené">${isFav(d.id) ? '★' : '☆'}</button></div>
-      <p class="meta">${esc(d.summary || '')}</p>
+      <p class="meta"><span class="pill" style="margin:0 6px 0 0">${esc(drillType(d))}</span>${esc(d.summary || '')}</p>
       ${theory}
     </div>
     <div class="card">
@@ -688,6 +742,26 @@ function renderDrill() {
 /* ---------- Přehledy ---------- */
 $('#year').onchange = renderStats;
 
+/* ---------- Ráže a barvy ---------- */
+// Kategorická paleta pro tmavý povrch (ověřeno validátorem: CVD ΔE ≥ 8,4, kontrast ≥ 3:1)
+const CAL_COLORS = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#0ca30c', '#9085e9', '#e66767'];
+const OTHER_COLOR = '#7d8784';
+const calKey = c => (c || '').toLowerCase().replace(/\s+/g, '');
+const entryCaliber = e => { const g = weaponById(e.weaponId); return ((g ? g.caliber : e.caliber) || '').trim(); };
+// barva patří ráži, ne jejímu pořadí v roce: pořadí podle celkového počtu ran za celou dobu
+function caliberPalette() {
+  const tot = new Map();
+  data.trainings.forEach(t => t.weapons.forEach(e => {
+    const c = entryCaliber(e), k = calKey(c) || '?';
+    const cur = tot.get(k) || { label: c || 'ráže neuvedena', n: 0 };
+    cur.n += e.rounds; tot.set(k, cur);
+  }));
+  const ranked = [...tot.entries()].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]));
+  const map = new Map();
+  ranked.forEach(([k, v], i) => map.set(k, i < 8 ? { label: v.label, color: CAL_COLORS[i] } : { label: 'Ostatní ráže', color: OTHER_COLOR, other: true }));
+  return map;
+}
+
 function renderStats() {
   const cy = thisYear();
   const years = [...new Set(data.trainings.map(t => t.date.slice(0, 4)))].sort().reverse();
@@ -700,18 +774,28 @@ function renderStats() {
 
   const ts = data.trainings.filter(t => t.date.startsWith(y));
   const total = ts.reduce((s, t) => s + trainingTotal(t), 0);
+  const pal = caliberPalette();
+  const groupOf = e => { const k = calKey(entryCaliber(e)) || '?'; const p = pal.get(k); return p.other ? 'other' : k; };
+  const groupInfo = g => g === 'other' ? { label: 'Ostatní ráže', color: OTHER_COLOR } : pal.get(g);
 
-  const byWeapon = new Map();
+  const byWeapon = new Map(), byCal = new Map();
+  const months = Array.from({ length: 12 }, () => new Map());
   ts.forEach(t => t.weapons.forEach(e => {
     const k = weaponById(e.weaponId) ? e.weaponId : 'm:' + (e.name || '').toLowerCase() + '|' + (e.caliber || '').toLowerCase();
-    const cur = byWeapon.get(k) || { label: entryLabel(e), n: 0 };
-    cur.n += e.rounds;
-    byWeapon.set(k, cur);
+    const w = byWeapon.get(k) || { label: entryLabel(e), n: 0, g: groupOf(e) };
+    w.n += e.rounds; byWeapon.set(k, w);
+    const g = groupOf(e);
+    byCal.set(g, (byCal.get(g) || 0) + e.rounds);
+    const m = months[Number(t.date.slice(5, 7)) - 1];
+    m.set(g, (m.get(g) || 0) + e.rounds);
   }));
-
-  const months = Array(12).fill(0);
-  ts.forEach(t => { months[Number(t.date.slice(5, 7)) - 1] += trainingTotal(t); });
-  const max = Math.max(1, ...months);
+  // pořadí skupin v grafu: podle stálého pořadí barev
+  const order = [...byCal.keys()].sort((a, b) => (a === 'other') - (b === 'other') || CAL_COLORS.indexOf(groupInfo(a).color) - CAL_COLORS.indexOf(groupInfo(b).color));
+  const mTot = months.map(m => [...m.values()].reduce((s, v) => s + v, 0));
+  const max = Math.max(1, ...mTot);
+  const MONTHS = ['leden', 'únor', 'březen', 'duben', 'květen', 'červen', 'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec'];
+  const legend = order.length > 1 ? `<div class="legend">${order.map(g => `<span><i style="background:${groupInfo(g).color}"></i>${esc(groupInfo(g).label)}</span>`).join('')}</div>` : '';
+  const calMax = Math.max(1, ...byCal.values());
 
   $('#stats').innerHTML = `
     <div class="card summary">
@@ -720,25 +804,41 @@ function renderStats() {
     </div>
     <div class="card">
       <h3>Podle měsíců</h3>
-      ${months.map((v, i) => `
-        <div class="bar-row">
+      ${legend}
+      ${months.map((m, i) => `
+        <div class="bar-row mrow" data-m="${i}">
           <span class="m">${String(i + 1).padStart(2, '0')}</span>
-          <div class="bar"><i style="width:${(v / max * 100).toFixed(1)}%"></i></div>
-          <span class="v">${fmt(v)}</span>
-        </div>`).join('')}
+          <div class="bar stack"><div style="width:${(mTot[i] / max * 100).toFixed(1)}%">${order.filter(g => m.get(g)).map(g =>
+            `<i style="flex:${m.get(g)};background:${groupInfo(g).color}" title="${esc(groupInfo(g).label)}: ${fmt(m.get(g))}"></i>`).join('')}</div></div>
+          <span class="v">${fmt(mTot[i])}</span>
+        </div>
+        <div class="mdetail hidden" id="md-${i}">${mTot[i] ? `<b>${MONTHS[i]}</b> · ` + order.filter(g => m.get(g)).map(g => `${esc(groupInfo(g).label)} ${fmt(m.get(g))}`).join(' · ') : `<b>${MONTHS[i]}</b> · žádné rány`}</div>`).join('')}
+      <div class="meta" style="margin-top:6px">Klepnutím na měsíc zobrazíte rozpis podle ráže.</div>
+    </div>
+    <div class="card">
+      <h3>Podle ráže</h3>
+      ${order.length ? order.sort((a, b) => byCal.get(b) - byCal.get(a)).map(g => `
+        <div class="cal-row">
+          <span class="sw" style="background:${groupInfo(g).color}"></span>
+          <span class="cl">${esc(groupInfo(g).label)}</span>
+          <span class="cv"><b>${fmt(byCal.get(g))}</b> <span class="meta">${Math.round(byCal.get(g) / total * 100)} %</span></span>
+        </div>
+        <div class="bar thin"><i style="width:${(byCal.get(g) / calMax * 100).toFixed(1)}%;background:${groupInfo(g).color}"></i></div>`).join('')
+        : '<p class="meta">Pro tento rok nejsou žádná data.</p>'}
     </div>
     <div class="card">
       <h3>Podle zbraně</h3>
       ${[...byWeapon.values()].sort((a, b) => b.n - a.n)
-        .map(v => `<div class="tags">${esc(v.label)}: <b>${fmt(v.n)}</b></div>`).join('')
+        .map(v => `<div class="cal-row"><span class="sw" style="background:${groupInfo(v.g).color}"></span><span class="cl">${esc(v.label)}</span><span class="cv"><b>${fmt(v.n)}</b></span></div>`).join('')
         || '<p class="meta">Pro tento rok nejsou žádná data.</p>'}
     </div>`;
+  $('#stats').querySelectorAll('.mrow').forEach(r => r.onclick = () => $('#md-' + r.dataset.m).classList.toggle('hidden'));
 }
 
 /* ---------- Data ---------- */
 $('#export').onclick = () => {
   const out = { weapons: data.weapons.filter(g => !g.demo), trainings: data.trainings.filter(t => !t.demo),
-    results: data.results.filter(r => !r.demo), customDrills: data.customDrills, favDrills: data.favDrills };
+    results: data.results.filter(r => !r.demo), customDrills: data.customDrills, favDrills: data.favDrills, drillTypes: data.drillTypes };
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -769,6 +869,7 @@ $('#import').onchange = async ev => {
     };
     const nR = mergeById('results', r => r.drillId && r.date);
     mergeById('customDrills', d => d.name);
+    if (Array.isArray(incoming.drillTypes)) data.drillTypes = [...new Set([...data.drillTypes, ...incoming.drillTypes])];
     if (Array.isArray(incoming.favDrills)) data.favDrills = [...new Set([...data.favDrills, ...incoming.favDrills])];
     save();
     alert(`Přidáno tréninků: ${added.length}, zbraní: ${addedW.length}, výsledků cvičení: ${nR}`);

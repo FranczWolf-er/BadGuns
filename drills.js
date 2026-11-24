@@ -3,10 +3,11 @@
 //          'score' = hlavní výsledek je číslo (zásahy, body, metry); better: 'high' | 'low'.
 // scoreLabel / scoreMax: doplňkové nebo hlavní číselné pole.
 // classes: hranice výkonnostních tříd podle času (od nejlepší).
+// type: typ cvičení (Pistole, Puška, …), uživatel si může přidat vlastní typy.
 // Zdroj a další cvičení: https://gun.4fan.cz
 const DRILLS = [
   {
-    id: 'bill', name: 'Bill Drill', primary: 'time', scoreLabel: 'Zásahy v zóně A', scoreMax: 6,
+    id: 'bill', type: 'Pistole', name: 'Bill Drill', primary: 'time', scoreLabel: 'Zásahy v zóně A', scoreMax: 6,
     summary: '6 ran z pouzdra na jeden terč, co nejrychleji a vše do A.',
     facts: { 'Vzdálenost': '6,5 m', 'Terč': 'IPSC (případně IDPA nebo LOS)', 'Výchozí pozice': 'zbraň v pouzdře, ruce volně podél těla', 'Náboje': '6' },
     steps: ['Na signál tasíte.', 'Vystřelíte 6 ran rychle za sebou na jeden terč.'],
@@ -16,7 +17,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/01/bill-drill/'
   },
   {
-    id: 'elpres', name: 'El Presidente', primary: 'time', scoreLabel: 'Zásahy v zóně A', scoreMax: 12,
+    id: 'elpres', type: 'Pistole', name: 'El Presidente', primary: 'time', scoreLabel: 'Zásahy v zóně A', scoreMax: 12,
     summary: 'Otočka, 3 terče po 2 ranách, přebití a znovu. Klasika od Jeffa Coopera.',
     facts: { 'Vzdálenost': '9,1 m', 'Terč': '3 postavové terče 1 m od sebe', 'Výchozí pozice': 'zády k terčům, ruce nad rameny, zbraň v pouzdře', 'Náboje': '12 (2 zásobníky po 6)' },
     steps: ['Na signál se otočíte a tasíte.', 'Dvě rány do každého ze tří terčů.', 'Vynucené přebití.', 'Znovu dvě rány do každého terče.'],
@@ -26,7 +27,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/01/el-presidente/'
   },
   {
-    id: 'fast', name: 'F.A.S.T.', primary: 'time', scoreLabel: 'Počet chyb (mimo cíl)', scoreMax: 6, scoreBetter: 'low',
+    id: 'fast', type: 'Pistole', name: 'F.A.S.T.', primary: 'time', scoreLabel: 'Počet chyb (mimo cíl)', scoreMax: 6, scoreBetter: 'low',
     summary: 'Fundamentals, Accuracy & Speed Test: 2 rány do hlavy, přebití, 4 do těla.',
     facts: { 'Vzdálenost': '6,4 m', 'Terč': 'hlava = kartička 7,6 × 12,7 cm, tělo = kruh ⌀ 20 cm', 'Výchozí pozice': 'čelem k terči, ruce volně, zbraň v pouzdře', 'Náboje': '6 (ve zbrani 2, v náhradním zásobníku 4)' },
     steps: ['Na signál tasíte a dáte 2 rány na hlavu.', 'Vynucené přebití.', '4 rány na tělo.'],
@@ -37,7 +38,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/12/f-a-s-t-fundamentals-accuracy-speed-test/'
   },
   {
-    id: 'dot', name: 'Dot Torture', primary: 'score', scoreLabel: 'Zásahy (z 50)', scoreMax: 50, better: 'high',
+    id: 'dot', type: 'Pistole', name: 'Dot Torture', primary: 'score', scoreLabel: 'Zásahy (z 50)', scoreMax: 50, better: 'high',
     summary: '50 ran na 10 malých kruhů. Bez časového limitu, jen přesnost.',
     facts: { 'Vzdálenost': '3,7 m (po čistém průchodu prodlužujte)', 'Terč': 'speciální terč s 10 kruhy ⌀ 5 cm', 'Náboje': '50', 'Čas': 'neměří se, nespěchejte' },
     steps: [
@@ -54,7 +55,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/01/dot-torture/'
   },
   {
-    id: 'card', name: '3×5 Card Drill', primary: 'score', scoreLabel: 'Nejdelší splněná vzdálenost (m)', better: 'high',
+    id: 'card', type: 'Pistole', name: '3×5 Card Drill', primary: 'score', scoreLabel: 'Nejdelší splněná vzdálenost (m)', better: 'high',
     summary: '6 ran na kartičku 7,6 × 12,7 cm, postupně až do 13,7 m.',
     facts: { 'Vzdálenosti': '2,7 · 4,5 · 6,4 · 9,1 · 13,7 m', 'Terč': 'kartička 7,6 × 12,7 cm (3 × 5 palců)', 'Náboje': '6 na každou vzdálenost', 'Čas': 'bez limitu, vlastním tempem' },
     steps: ['Začnete na nejkratší vzdálenosti.', 'Vystřelíte 6 ran s důrazem na přesnost.', 'Když jsou všechny zásahy na kartičce, posunete se na další vzdálenost.', 'U zbraně SA/DA střídejte DA, SA, DA, SA, DA, SA.'],
@@ -63,7 +64,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/01/3x5-card-drill/'
   },
   {
-    id: 'onefive', name: '1-to-5 Drill', primary: 'time', scoreLabel: 'Zásahy v zóně A', scoreMax: 15,
+    id: 'onefive', type: 'Puška', name: '1-to-5 Drill', primary: 'time', scoreLabel: 'Zásahy v zóně A', scoreMax: 15,
     summary: '3 terče, 1-2-3-4-5 ran, převážně pro pušku.',
     facts: { 'Vzdálenost': '5 m', 'Terč': '3 postavové terče asi 1 m od sebe', 'Výchozí pozice': 'pohotovostní, pažba v rameni, ústí k zemi', 'Náboje': '15' },
     steps: ['1 rána na levý terč.', '2 rány na prostřední.', '3 rány na pravý.', '4 rány na prostřední.', '5 ran na levý.'],
@@ -72,7 +73,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/02/1-to-5-drill/'
   },
   {
-    id: 'reload1', name: '1-Reload-1', primary: 'time', scoreLabel: 'Zásahy v zóně A', scoreMax: 2,
+    id: 'reload1', type: 'Pistole', name: '1-Reload-1', primary: 'time', scoreLabel: 'Zásahy v zóně A', scoreMax: 2,
     summary: 'Tasení, 1 rána, vynucené přebití, 1 rána. Trénink přebíjení.',
     facts: { 'Vzdálenost': '6 m', 'Terč': 'libovolný, ideálně kovový gong ⌀ asi 20 cm', 'Výchozí pozice': 'zbraň v pouzdře s 1 nábojem, 1 náboj v náhradním zásobníku', 'Náboje': '2' },
     steps: ['Na signál tasíte a vystřelíte 1 ránu.', 'Vynucené přebití.', 'Druhá rána.'],
@@ -82,7 +83,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/01/1-reload-1/'
   },
   {
-    id: 'moz', name: 'Mozambique Drill', primary: 'time', scoreLabel: 'Platné zásahy (z 3)', scoreMax: 3,
+    id: 'moz', type: 'Pistole', name: 'Mozambique Drill', primary: 'time', scoreLabel: 'Platné zásahy (z 3)', scoreMax: 3,
     summary: '2 rány na tělo a 1 na hlavu, technika na blízkou vzdálenost.',
     facts: { 'Vzdálenost': 'asi 5 m (pistole 5–10 m, puška 15–25 m)', 'Terč': 'figura IPSC, IDPA nebo LOS', 'Výchozí pozice': 'zbraň v pouzdře', 'Náboje': '3' },
     steps: ['Na signál tasíte.', 'Dvě rány na tělo.', 'Jedna rána na hlavu.'],
@@ -91,7 +92,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/02/mozambique-drill/'
   },
   {
-    id: 'test', name: 'The Test (10-10-10)', primary: 'score', scoreLabel: 'Body (ze 100)', scoreMax: 100, better: 'high',
+    id: 'test', type: 'Pistole', name: 'The Test (10-10-10)', primary: 'score', scoreLabel: 'Body (ze 100)', scoreMax: 100, better: 'high',
     summary: '10 ran, 10 yardů, 10 sekund na terčový kruh.',
     facts: { 'Vzdálenost': '9,14 m (10 yardů)', 'Terč': 'NRA B8 oříznutý na A4', 'Výchozí pozice': 'nabitá zbraň v nízké pohotovostní poloze (pokročilí z pouzdra nebo krytého nošení)', 'Náboje': '10', 'Čas': 'limit 10 s' },
     steps: ['Na signál vystřelíte všech 10 ran na terč během 10 sekund.'],
@@ -100,7 +101,7 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/03/the-test/'
   },
   {
-    id: 'dummy', name: 'Ball & Dummy', primary: 'score', scoreLabel: 'Počet cuknutí', better: 'low',
+    id: 'dummy', type: 'Pistole', name: 'Ball & Dummy', primary: 'score', scoreLabel: 'Počet cuknutí', better: 'low',
     summary: 'Cvičné náboje namíchané mezi ostré odhalí cukání a předvídání výstřelu.',
     facts: { 'Vzdálenost': 'asi 3–5 m', 'Terč': 'libovolný malý, např. kartička 7,6 × 12,7 cm', 'Náboje': 'libovolně, asi 2/3 ostré a 1/3 cvičné', 'Potřeba': 'parťák, který nabije zásobník' },
     steps: ['Parťák náhodně namíchá ostré a cvičné náboje (u revolveru nechá 1–3 komory prázdné).', 'Střílíte na malý blízký terč.', 'Při cvičném náboji musí zbraň zůstat úplně v klidu.'],
@@ -109,3 +110,5 @@ const DRILLS = [
     source: 'https://gun.4fan.cz/2021/01/ball-dummy-drill/'
   }
 ];
+
+const DRILL_TYPES = ['Pistole', 'Puška', 'Brokovnice', 'Suchý trénink'];
