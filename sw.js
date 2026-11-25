@@ -1,7 +1,7 @@
 // Service worker: aplikace běží i offline.
 // Strategie „nejdřív síť“: online se vždy načte aktuální verze, mezipaměť slouží jen bez připojení.
 // Při každé změně souborů zvyšte číslo verze, aby zařízení zobrazila upozornění na novou verzi.
-const CACHE = 'badguns-v21';
+const CACHE = 'badguns-v22';
 const FILES = ['./', 'index.html', 'config.js', 'drills.js', 'cloud.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

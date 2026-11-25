@@ -9,6 +9,7 @@ Jednoduchá webová aplikace pro evidenci tréninků na střelnici a počtu vyst
 - Automatická záloha na OneDrive se synchronizací mezi zařízeními (nastavení viz `NAVOD.md`).
 - Finance: nákupy nábojů, průměrná cena za náboj podle ráže a náklady na střelbu v Přehledech i u tréninků.
 - Přebíjení: dávky s cenami komponent, cena přebitého náboje, rozlišení továrních a přebíjených ran.
+- Navážky: laborace náboje a porovnání navážek podle bodového soustřelu, rozptylu a rychlosti.
 - Export a import dat ve formátu JSON.
 - Záložka Výkony: přepínání Cvičení / Závody. Závody s vlastními typy, výsledky (body, čas, umístění, procenta) a grafem pokroku.
 - Střelecká cvičení (Bill Drill, El Presidente, Dot Torture…) s teorií, zápisem výsledků, grafem pokroku a oblíbenými; typy cvičení s filtrem, lze přidat vlastní cvičení i vlastní typ.

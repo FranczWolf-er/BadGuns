@@ -79,6 +79,11 @@ ol.steps{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.5}
 .pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:var(--ghost);color:var(--ink);margin-left:6px}
 .res{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .res button{padding:4px 10px;font-size:13px}
+.ltab{width:100%;border-collapse:collapse;font-size:13px}
+.ltab th{color:var(--muted);font-weight:500;text-align:right;padding:4px 3px;border-bottom:1px solid var(--line)}
+.ltab td{text-align:right;padding:6px 3px;border-bottom:1px solid var(--line)}
+.ltab th:first-child,.ltab td:first-child{text-align:left}
+.ltab td.best{color:#f2c94c;font-weight:600}
 .res.sel{background:var(--ghost);margin:0 -8px;padding:8px;border-radius:8px}
 form.editing{outline:2px solid var(--accent)}
 a{color:#7fd1b8}
@@ -242,7 +247,7 @@ a{color:#7fd1b8}
   </section>
 
   <section id="tab-drills" class="hidden">
-    <div class="seg" id="dmode"><button data-m="drill" class="on">Cvičení</button><button data-m="comp">Závody</button></div>
+    <div class="seg" id="dmode"><button data-m="drill" class="on">Cvičení</button><button data-m="comp">Závody</button><button data-m="load">Navážky</button></div>
     <div class="chips" id="dtypes"></div>
     <button class="ghost block" id="cd-open" style="margin:0 0 12px">+ Vlastní cvičení</button>
     <form id="cdform" class="card hidden">
@@ -262,6 +267,38 @@ a{color:#7fd1b8}
       <button type="button" class="ghost block" id="cd-close">Zavřít</button>
     </form>
     <div id="drills"></div>
+    <div id="loads-view" class="hidden">
+      <button class="ghost block" id="ld-open" style="margin:0 0 12px">+ Nová laborace</button>
+      <form id="ldform" class="card hidden">
+        <h3 id="ld-title">Nová laborace</h3>
+        <div id="ld-copybox"><label>Převzít z dávky přebíjení</label><select id="ld-copy"></select></div>
+        <label>Název, nepovinné</label>
+        <input type="text" id="ld-name" placeholder="např. 9 mm na IPSC, .308 na 300 m">
+        <div class="row">
+          <div><label>Ráže</label><input type="text" id="ld-caliber" list="b-cals" required placeholder="např. 9 mm Luger"></div>
+          <div><label>Zbraň</label><select id="ld-gun"></select></div>
+        </div>
+        <div class="row">
+          <div><label>Střela</label><input type="text" id="ld-bullet" placeholder="např. H&amp;N 124gr RN"></div>
+          <div><label>Prach</label><input type="text" id="ld-powder" placeholder="např. Vihtavuori N320"></div>
+        </div>
+        <div class="row">
+          <div><label>Zápalka</label><input type="text" id="ld-primer" placeholder="např. S&amp;B Small Pistol"></div>
+          <div><label>Nábojnice</label><input type="text" id="ld-case" placeholder="např. S&amp;B, 3× použitá"></div>
+        </div>
+        <label>Délka náboje OAL (mm), nepovinné</label>
+        <input type="number" id="ld-oal" min="0" step="0.01" inputmode="decimal">
+        <label>Poznámka</label>
+        <input type="text" id="ld-note" placeholder="např. cíl: tichý chod, PF 125">
+        <button type="submit" class="block" id="ld-submit">Uložit laboraci</button>
+        <button type="button" class="ghost block" id="ld-close">Zavřít</button>
+      </form>
+      <div id="loads"></div>
+    </div>
+  </section>
+
+  <section id="tab-load" class="hidden">
+    <div id="load"></div>
   </section>
 
   <section id="tab-drill" class="hidden">
@@ -320,6 +357,8 @@ if (!Array.isArray(data.favDrills)) data.favDrills = [];
 if (!Array.isArray(data.drillTypes)) data.drillTypes = [];   // vlastní typy cvičení
 if (!Array.isArray(data.purchases)) data.purchases = [];   // nákupy nábojů
 if (!Array.isArray(data.reloads)) data.reloads = [];       // dávky přebíjení
+if (!Array.isArray(data.loads)) data.loads = [];           // laborace (specifikace náboje)
+if (!Array.isArray(data.loadTests)) data.loadTests = [];   // zkoušky navážek
 if (!data.tomb || typeof data.tomb !== 'object') data.tomb = {};   // smazané záznamy (kvůli záloze)
 
 const $ = s => document.querySelector(s);
@@ -343,7 +382,7 @@ const usageCount = id => data.trainings.filter(t => t.weapons.some(e => e.weapon
 const sortedGuns = () => [...data.weapons].sort((a, b) => (!!a.archived - !!b.archived) || a.name.localeCompare(b.name, 'cs'));
 
 /* ---------- Ukázková data ---------- */
-const hasDemo = () => data.weapons.some(g => g.demo) || data.purchases.some(p => p.demo) || data.reloads.some(r => r.demo) || data.trainings.some(t => t.demo) || data.results.some(r => r.demo);
+const hasDemo = () => data.weapons.some(g => g.demo) || data.purchases.some(p => p.demo) || data.reloads.some(r => r.demo) || data.loads.some(l => l.demo) || data.trainings.some(t => t.demo) || data.results.some(r => r.demo);
 const updateDemoBar = () => $('#demo-bar').classList.toggle('hidden', !hasDemo());
 
 function addDemo() {
@@ -419,6 +458,18 @@ function addDemo() {
       const d = new Date(today); d.setDate(d.getDate() - back);
       data.reloads.push({ id: uid(), demo: true, date: d.toISOString().slice(0, 10), caliber, qty, bullet, bulletPrice, powder, charge, powderPackPrice, powderPackGrams, primer, primerPrice, casePrice, caseUses, note });
     });
+  // ukázkové laborace s navážkami: rozptyl nejmenší uprostřed řady, rychlost roste s navážkou
+  [['9 mm Luger', 'H&N 124gr RN', 'Vihtavuori N320', 'S&B Small Pistol', 'S&B, sbírané', 29.5, 'Laborace na IPSC (minor)', 0, 25, 10, [3.9, 4.1, 4.3, 4.5], [41, 33, 29, 37], [318, 331, 343, 356], [88, 91, 93, 90]],
+   ['.308 Win', 'Sierra MatchKing 168gr', 'Vihtavuori N140', 'CCI BR2', 'Lapua, 5. použití', 71.1, 'Přesná střelba 100 m', 4, 100, 5, [42.5, 43.0, 43.5, 44.0, 44.5], [24, 19, 14, 17, 22], [790, 801, 812, 822, 833], [46, 47, 49, 48, 47]]]
+    .forEach(([caliber, bullet, powder, primer, kase, oal, name, gun, distance, shots, charges, groups, vels, scores], li) => {
+      const id = 'l-' + uid();
+      data.loads.push({ id, demo: true, name, caliber, bullet, powder, primer, case: kase, oal, weaponId: guns[gun].id });
+      charges.forEach((c, i) => [0, 1].forEach(rep => {
+        const d = new Date(today); d.setDate(d.getDate() - 120 + li * 30 + i * 7 + rep * 3);
+        data.loadTests.push({ id: uid(), demo: true, loadId: id, date: d.toISOString().slice(0, 10), charge: c, distance, shots,
+          group: +(groups[i] * (1 + (rnd(30) - 15) / 100)).toFixed(1), velocity: vels[i] + rnd(7) - 3, score: Math.min(shots * 10, scores[i] + rnd(3) - 1), weaponId: guns[gun].id });
+      }));
+    });
   // část ran z ukázkových tréninků je z přebíjených nábojů
   trainings.forEach((t, i) => t.weapons.forEach(e => { if (/9 mm|\.308/.test(e.caliber) && i % 3 === 0) e.reloaded = true; }));
   data.favDrills = [...new Set([...data.favDrills, 'bill', 'dot'])];
@@ -438,6 +489,8 @@ function removeDemo() {
   data.customDrills = data.customDrills.filter(d => !d.demo);
   data.purchases = data.purchases.filter(p => !p.demo);
   data.reloads = data.reloads.filter(r => !r.demo);
+  data.loads = data.loads.filter(l => !l.demo);
+  data.loadTests = data.loadTests.filter(t => !t.demo);
   data.results.forEach(r => { if (ids.has(r.weaponId)) delete r.weaponId; });
   data.trainings.forEach(t => t.weapons.forEach(e => { if (ids.has(e.weaponId)) delete e.weaponId; }));
   save();
@@ -456,7 +509,7 @@ function show(tab, keepForm) {
   curTab = tab;
   updateDemoBar();
   document.querySelectorAll('section[id^="tab-"]').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + tab));
-  document.querySelectorAll('nav button, #gear').forEach(b => b.classList.toggle('active', b.dataset.tab === ({ new: 'list', drill: 'drills' }[tab] || tab)));
+  document.querySelectorAll('nav button, #gear').forEach(b => b.classList.toggle('active', b.dataset.tab === ({ new: 'list', drill: 'drills', load: 'drills' }[tab] || tab)));
   $('#fab').classList.toggle('hidden', tab !== 'list');
   if (tab === 'list') renderList();
   if (tab === 'new' && !keepForm) resetForm();
@@ -705,7 +758,11 @@ const PRIM_OPTS = {
 function setDrillMode(m) {
   drillMode = m;
   $('#dmode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-  const c = m === 'comp';
+  const c = m === 'comp', ld = m === 'load';
+  $('#loads-view').classList.toggle('hidden', !ld);
+  $('#drills').classList.toggle('hidden', ld);
+  $('#cd-open').classList.toggle('hidden', ld);
+  if (ld) { $('#cd-close').click(); $('#cd-open').classList.add('hidden'); return; }
   $('#cd-open').textContent = c ? '+ Nový typ závodu' : '+ Vlastní cvičení';
   $('#cd-title').textContent = c ? 'Nový typ závodu' : 'Vlastní cvičení';
   $('#cd-submit').textContent = c ? 'Přidat typ závodu' : 'Přidat cvičení';
@@ -759,6 +816,7 @@ $('#cd-close').onclick = () => { $('#cdform').classList.add('hidden'); $('#cd-op
 
 function renderDrills() {
   renderTypeChips();
+  if (drillMode === 'load') { $('#dtypes').classList.add('hidden'); renderLoads(); return; }
   const comp = drillMode === 'comp';
   const list = modeItems().map((d, i) => ({ d, i }))
     .filter(({ d }) => comp || drillFilter === 'Vše' || (drillFilter === '★ Oblíbená' ? isFav(d.id) : drillType(d) === drillFilter))
@@ -1179,6 +1237,207 @@ function renderReloads() {
   });
 }
 
+/* ---------- Navážky (laborace přebíjených nábojů) ---------- */
+// laborace = specifikace náboje; zkoušky = výsledky střelby s konkrétní navážkou
+const LD_FIELDS = ['name', 'caliber', 'bullet', 'powder', 'primer', 'case', 'note'];
+let loadEditId = null, currentLoad = null, editTestId = null;
+const loadTitle = l => l.name || [l.caliber, l.bullet, l.powder].filter(Boolean).join(' · ') || 'Laborace';
+const loadSpec = l => [l.caliber, l.bullet, l.powder, l.primer, l.case, l.oal ? 'OAL ' + fmtNum(l.oal) + ' mm' : ''].filter(Boolean).join(' · ');
+const loadTests = id => data.loadTests.filter(t => t.loadId === id).sort((a, b) => a.date.localeCompare(b.date) || (a.ts || 0) - (b.ts || 0));
+const lastTestDate = id => { const t = loadTests(id); return t.length ? t[t.length - 1].date : ''; };
+const avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+
+// souhrn po navážkách: průměr bodů, nejmenší a průměrný rozptyl, průměrná rychlost
+function chargeSummary(tests) {
+  const m = new Map();
+  tests.forEach(t => {
+    if (t.charge == null) return;
+    const k = String(t.charge), c = m.get(k) || { charge: t.charge, n: 0, score: [], group: [], vel: [] };
+    c.n++;
+    if (t.score != null) c.score.push(t.score);
+    if (t.group != null) c.group.push(t.group);
+    if (t.velocity != null) c.vel.push(t.velocity);
+    m.set(k, c);
+  });
+  return [...m.values()].sort((a, b) => a.charge - b.charge).map(c => ({
+    charge: c.charge, n: c.n, score: avg(c.score), groupMin: c.group.length ? Math.min(...c.group) : null, group: avg(c.group), vel: avg(c.vel)
+  }));
+}
+
+function gunOptions(sel) {
+  const guns = sortedGuns().filter(g => !g.archived || g.id === sel);
+  return '<option value="">neuvedena</option>' + guns.map(g => `<option value="${esc(g.id)}"${g.id === sel ? ' selected' : ''}>${esc(gunName(g))}</option>`).join('');
+}
+function openLoadForm(l) {
+  loadEditId = l ? l.id : null;
+  $('#ld-title').textContent = l ? 'Upravit laboraci' : 'Nová laborace';
+  $('#ld-submit').textContent = l ? 'Uložit změny' : 'Uložit laboraci';
+  $('#b-cals').innerHTML = knownCalibers().map(c => `<option value="${esc(c)}">`).join('');
+  LD_FIELDS.forEach(k => { $('#ld-' + k).value = l ? (l[k] || '') : ''; });
+  $('#ld-oal').value = l && l.oal != null ? l.oal : '';
+  $('#ld-gun').innerHTML = gunOptions(l ? l.weaponId : '');
+  $('#ld-copybox').classList.toggle('hidden', !!l || !data.reloads.length);
+  $('#ld-copy').innerHTML = '<option value="">–</option>' + data.reloads.map(r => `<option value="${esc(r.id)}">${esc(r.date)} · ${esc(r.caliber)} · ${esc(r.bullet || '')} ${esc(r.powder || '')}</option>`).join('');
+  $('#ldform').classList.remove('hidden');
+  $('#ld-open').classList.add('hidden');
+}
+function closeLoadForm() { $('#ldform').classList.add('hidden'); $('#ld-open').classList.remove('hidden'); loadEditId = null; }
+$('#ld-open').onclick = () => openLoadForm(null);
+$('#ld-close').onclick = () => { const back = loadEditId; closeLoadForm(); if (back) { show('load'); renderLoad(); } };
+$('#ld-copy').onchange = () => {
+  const r = data.reloads.find(x => x.id === $('#ld-copy').value);
+  if (!r) return;
+  $('#ld-caliber').value = r.caliber || ''; $('#ld-bullet').value = r.bullet || ''; $('#ld-powder').value = r.powder || '';
+  $('#ld-primer').value = r.primer || ''; if (r.note && !$('#ld-note').value) $('#ld-note').value = r.note;
+};
+$('#ldform').onsubmit = ev => {
+  ev.preventDefault();
+  const l = { id: loadEditId || 'l-' + uid() };
+  LD_FIELDS.forEach(k => { const v = $('#ld-' + k).value.trim(); if (v) l[k] = v; });
+  const oal = parseFloat(($('#ld-oal').value || '').replace(',', '.'));
+  if (oal > 0) l.oal = oal;
+  if ($('#ld-gun').value) l.weaponId = $('#ld-gun').value;
+  if (!l.caliber) { alert('Vyplňte ráži.'); return; }
+  const editing = loadEditId;
+  if (editing) data.loads = data.loads.map(x => x.id === editing ? Object.assign(x.demo ? { demo: true } : {}, l) : x);
+  else data.loads.push(l);
+  save();
+  closeLoadForm();
+  if (editing) { show('load'); renderLoad(); } else openLoad(l.id);
+};
+
+function renderLoads() {
+  const list = [...data.loads].sort((a, b) => lastTestDate(b.id).localeCompare(lastTestDate(a.id)) || loadTitle(a).localeCompare(loadTitle(b), 'cs'));
+  $('#loads').innerHTML = list.map(l => {
+    const ts = loadTests(l.id), sum = chargeSummary(ts);
+    const bestG = sum.filter(c => c.groupMin != null).sort((a, b) => a.groupMin - b.groupMin)[0];
+    return `<div class="card drill" data-lopen="${esc(l.id)}">
+      <h3>${esc(loadTitle(l))}</h3>
+      <div class="meta">${esc(loadSpec(l))}</div>
+      ${ts.length ? `<div class="tags">${sum.length} ${plural(sum.length, 'navážka', 'navážky', 'navážek')} · ${ts.length} ${plural(ts.length, 'zkouška', 'zkoušky', 'zkoušek')}${bestG ? ` · nejmenší rozptyl <b>${fmtNum(bestG.groupMin)} mm</b> (${fmtNum(bestG.charge)} gr)` : ''}</div>` : '<div class="tags">Zatím bez zkoušek</div>'}
+    </div>`;
+  }).join('') || '<div class="card"><p class="meta" style="margin:0">Zatím žádná laborace. Založte si náboj (ráže, střela, prach, zápalka, nábojnice) a ke zkoušeným navážkám zapisujte bodový soustřel, rozptyl a rychlost.</p></div>';
+  $('#loads').querySelectorAll('[data-lopen]').forEach(c => c.onclick = () => openLoad(c.dataset.lopen));
+}
+function openLoad(id) { currentLoad = id; editTestId = null; show('load'); renderLoad(); }
+
+// malý graf jedné veličiny podle navážky (každá veličina má vlastní graf, žádná dvojí osa)
+function chargeChart(sum, key, label, unit, lowerBetter) {
+  const pts = sum.filter(c => c[key] != null);
+  if (pts.length < 2) return '';
+  const W = 340, H = 120, L = 40, R = 10, T = 10, B = 22;
+  const xs = pts.map(c => c.charge), ys = pts.map(c => c[key]);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (y0 === y1) { y0 -= 1; y1 += 1; }
+  const pad = (y1 - y0) * 0.12; y0 -= pad; y1 += pad;
+  const x = v => L + (W - L - R) * (v - x0) / (x1 - x0 || 1);
+  const y = v => T + (H - T - B) * (y1 - v) / (y1 - y0);
+  const best = lowerBetter ? Math.min(...ys) : Math.max(...ys);
+  return `<div class="meta" style="margin-top:10px">${esc(label)}${lowerBetter ? ' (méně je lépe)' : ''}</div>
+  <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)} podle navážky">
+    ${[y1 - pad, y0 + pad].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 4}" y="${y(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${fmtNum(+v.toFixed(1))}</text>`).join('')}
+    <path d="${pts.map((c, i) => (i ? 'L' : 'M') + x(c.charge).toFixed(1) + ' ' + y(c[key]).toFixed(1)).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    ${pts.map(c => `<circle cx="${x(c.charge)}" cy="${y(c[key])}" r="${c[key] === best ? 5 : 3.5}" fill="${c[key] === best ? '#f2c94c' : 'var(--accent)'}"><title>${fmtNum(c.charge)} gr: ${fmtNum(+c[key].toFixed(1))} ${unit}</title></circle>
+      <text x="${x(c.charge)}" y="${H - 6}" font-size="10" fill="var(--muted)" text-anchor="middle">${fmtNum(c.charge)}</text>`).join('')}
+  </svg>`;
+}
+
+function renderLoad() {
+  const l = data.loads.find(x => x.id === currentLoad);
+  if (!l) { show('drills', true); return; }
+  const ts = loadTests(l.id), sum = chargeSummary(ts);
+  const editing = editTestId ? ts.find(t => t.id === editTestId) : null;
+  if (!editing) editTestId = null;
+  const bestOfCol = (k, low) => { const v = sum.map(c => c[k]).filter(x => x != null); return v.length ? (low ? Math.min(...v) : Math.max(...v)) : null; };
+  const bS = bestOfCol('score'), bG = bestOfCol('groupMin', true), bGa = bestOfCol('group', true);
+  const cell = (v, best, dec = 1) => v == null ? '<td>–</td>' : `<td class="${sum.length > 1 && v === best ? 'best' : ''}">${fmtNum(+v.toFixed(dec))}</td>`;
+  const table = sum.length ? `<table class="ltab"><thead><tr><th>Navážka</th><th>Zk.</th><th>Body ⌀</th><th>Rozptyl min</th><th>Rozptyl ⌀</th><th>Rychlost ⌀</th></tr></thead><tbody>
+    ${sum.map(c => `<tr><td>${fmtNum(c.charge)} gr</td><td>${c.n}</td>${cell(c.score, bS)}${cell(c.groupMin, bG)}${cell(c.group, bGa)}<td>${c.vel == null ? '–' : fmtNum(Math.round(c.vel))}</td></tr>`).join('')}
+    </tbody></table><div class="meta" style="margin-top:6px">Rozptyl v mm, rychlost v m/s. Žlutě nejlepší hodnota ve sloupci.</div>
+    ${chargeChart(sum, 'group', 'Rozptyl (mm) podle navážky', 'mm', true)}${chargeChart(sum, 'vel', 'Rychlost (m/s) podle navážky', 'm/s', false)}${chargeChart(sum, 'score', 'Body podle navážky', 'b.', false)}`
+    : '<p class="meta">Zapište první zkoušku navážky.</p>';
+  const charges = [...new Set(data.loadTests.filter(t => t.loadId === l.id).map(t => t.charge))].sort((a, b) => a - b);
+  const lastT = ts[ts.length - 1] || {};
+  $('#load').innerHTML = `
+    <button class="ghost" id="l-back" style="margin-bottom:10px">‹ Všechny laborace</button>
+    <div class="card">
+      <h3 style="font-size:20px">${esc(loadTitle(l))}</h3>
+      <div class="kv"><span>Ráže</span><b>${esc(l.caliber)}</b></div>
+      ${l.bullet ? `<div class="kv"><span>Střela</span><b>${esc(l.bullet)}</b></div>` : ''}
+      ${l.powder ? `<div class="kv"><span>Prach</span><b>${esc(l.powder)}</b></div>` : ''}
+      ${l.primer ? `<div class="kv"><span>Zápalka</span><b>${esc(l.primer)}</b></div>` : ''}
+      ${l.case ? `<div class="kv"><span>Nábojnice</span><b>${esc(l.case)}</b></div>` : ''}
+      ${l.oal ? `<div class="kv"><span>Délka náboje (OAL)</span><b>${fmtNum(l.oal)} mm</b></div>` : ''}
+      ${weaponById(l.weaponId) ? `<div class="kv"><span>Zbraň</span><b>${esc(weaponById(l.weaponId).name)}</b></div>` : ''}
+      ${l.note ? `<p class="meta">${esc(l.note)}</p>` : ''}
+      <div class="actions"><button class="ghost" id="l-edit">Upravit laboraci</button></div>
+    </div>
+    <div class="card"><h3>Porovnání navážek</h3>${table}</div>
+    <form class="card${editing ? ' editing' : ''}" id="ltform">
+      <h3>${editing ? 'Upravit zkoušku' : 'Zapsat zkoušku navážky'}</h3>
+      <div class="row">
+        <div><label>Datum</label><input type="date" id="lt-date" required></div>
+        <div><label>Navážka (gr)</label><input type="number" id="lt-charge" list="lt-charges" min="0" step="0.01" inputmode="decimal" required></div>
+      </div>
+      <datalist id="lt-charges">${charges.map(c => `<option value="${c}">`).join('')}</datalist>
+      <div class="row">
+        <div><label>Vzdálenost (m)</label><input type="number" id="lt-distance" min="0" step="1" inputmode="numeric"></div>
+        <div><label>Počet ran</label><input type="number" id="lt-shots" min="1" step="1" inputmode="numeric"></div>
+      </div>
+      <div class="row">
+        <div><label>Bodový soustřel</label><input type="number" id="lt-score" min="0" step="any" inputmode="decimal"></div>
+        <div><label>Rozptyl (mm)</label><input type="number" id="lt-group" min="0" step="0.1" inputmode="decimal"></div>
+      </div>
+      <div class="row">
+        <div><label>Rychlost ⌀ (m/s)</label><input type="number" id="lt-velocity" min="0" step="0.1" inputmode="decimal"></div>
+        <div><label>Zbraň</label><select id="lt-gun"></select></div>
+      </div>
+      <label>Poznámka</label><input type="text" id="lt-note" placeholder="např. ES 12 m/s, vítr, mírný tlak na zápalce">
+      <button type="submit" class="block">${editing ? 'Uložit změny' : 'Uložit zkoušku'}</button>
+      ${editing ? '<button type="button" class="ghost block" id="lt-cancel">Zrušit úpravu</button>' : ''}
+    </form>
+    ${ts.length ? `<div class="card"><h3>Historie zkoušek</h3>${[...ts].reverse().map(t => `
+      <div class="res${t.id === editTestId ? ' sel' : ''}"><div><b>${fmtNum(t.charge)} gr</b>${t.score != null ? ` · ${fmtNum(t.score)} b.` : ''}${t.group != null ? ` · ${fmtNum(t.group)} mm` : ''}${t.velocity != null ? ` · ${fmtNum(t.velocity)} m/s` : ''}
+        <div class="meta">${esc(t.date)}${t.distance ? ' · ' + fmtNum(t.distance) + ' m' : ''}${t.shots ? ' · ' + t.shots + ' ran' : ''}${weaponById(t.weaponId) ? ' · ' + esc(weaponById(t.weaponId).name) : ''}${t.note ? ' · ' + esc(t.note) : ''}</div></div>
+        <div style="display:flex;gap:6px"><button class="ghost" data-ltedit="${esc(t.id)}">Upravit</button><button class="danger" data-ltdel="${esc(t.id)}">Smazat</button></div></div>`).join('')}</div>` : ''}
+    <button class="danger block" id="l-del">Smazat laboraci</button>`;
+  // předvyplnění: při úpravě hodnoty zkoušky, jinak dnešek, poslední vzdálenost, počet ran a zbraň
+  const src = editing || { date: new Date().toISOString().slice(0, 10), distance: lastT.distance, shots: lastT.shots, weaponId: lastT.weaponId || l.weaponId };
+  if (!editing) src.date = new Date().toISOString().slice(0, 10);
+  $('#lt-gun').innerHTML = gunOptions(src.weaponId);
+  ['date', 'charge', 'distance', 'shots', 'score', 'group', 'velocity', 'note'].forEach(k => { $('#lt-' + k).value = src[k] != null ? src[k] : ''; });
+  $('#l-back').onclick = () => show('drills', true);
+  $('#l-edit').onclick = () => { show('drills', true); openLoadForm(l); window.scrollTo(0, 0); };
+  if (editing) $('#lt-cancel').onclick = () => { editTestId = null; renderLoad(); };
+  $('#ltform').onsubmit = ev => {
+    ev.preventDefault();
+    const num = k => { const v = ($('#lt-' + k).value || '').replace(',', '.'); return v === '' ? undefined : Math.max(0, parseFloat(v)); };
+    const t = { id: editing ? editing.id : uid(), ts: editing ? editing.ts : Date.now(), loadId: l.id, date: $('#lt-date').value,
+      charge: num('charge'), distance: num('distance'), shots: num('shots'), score: num('score'), group: num('group'), velocity: num('velocity'),
+      weaponId: $('#lt-gun').value || undefined, note: $('#lt-note').value.trim() || undefined };
+    if (t.charge == null || isNaN(t.charge)) { alert('Vyplňte navážku.'); return; }
+    if (t.score == null && t.group == null && t.velocity == null && !confirm('Není vyplněný bodový soustřel, rozptyl ani rychlost. Uložit i tak?')) return;
+    if (editing) data.loadTests = data.loadTests.map(x => x.id === editing.id ? Object.assign(x.demo ? { demo: true } : {}, t) : x);
+    else data.loadTests.push(t);
+    editTestId = null;
+    save();
+    renderLoad();
+  };
+  $('#load').querySelectorAll('[data-ltedit]').forEach(b => b.onclick = () => { editTestId = b.dataset.ltedit; renderLoad(); $('#ltform').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('#load').querySelectorAll('[data-ltdel]').forEach(b => b.onclick = () => {
+    if (!confirm('Smazat tuto zkoušku?')) return;
+    data.loadTests = data.loadTests.filter(t => t.id !== b.dataset.ltdel);
+    save(); renderLoad();
+  });
+  $('#l-del').onclick = () => {
+    const n = ts.length;
+    if (!confirm(n ? `Smazat laboraci i ${n} ${plural(n, 'zkoušku', 'zkoušky', 'zkoušek')}?` : 'Smazat laboraci?')) return;
+    data.loads = data.loads.filter(x => x.id !== l.id);
+    data.loadTests = data.loadTests.filter(t => t.loadId !== l.id);
+    save(); show('drills', true);
+  };
+}
+
 /* ---------- Přehledy ---------- */
 $('#year').onchange = renderStats;
 
@@ -1314,7 +1573,7 @@ function renderStats() {
 
 /* ---------- Data ---------- */
 $('#export').onclick = () => {
-  const out = { weapons: data.weapons.filter(g => !g.demo), trainings: data.trainings.filter(t => !t.demo), purchases: data.purchases.filter(p => !p.demo), reloads: data.reloads.filter(r => !r.demo),
+  const out = { weapons: data.weapons.filter(g => !g.demo), trainings: data.trainings.filter(t => !t.demo), purchases: data.purchases.filter(p => !p.demo), reloads: data.reloads.filter(r => !r.demo), loads: data.loads.filter(l => !l.demo), loadTests: data.loadTests.filter(t => !t.demo),
     results: data.results.filter(r => !r.demo), customDrills: data.customDrills, favDrills: data.favDrills, drillTypes: data.drillTypes };
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -1347,11 +1606,13 @@ $('#import').onchange = async ev => {
     const nR = mergeById('results', r => r.drillId && r.date);
     const nP = mergeById('purchases', p => p.caliber && p.qty > 0);
     const nL = mergeById('reloads', r => r.caliber && r.qty > 0);
+    const nLab = mergeById('loads', l => l.caliber);
+    const nT = mergeById('loadTests', t => t.loadId && t.charge != null);
     mergeById('customDrills', d => d.name);
     if (Array.isArray(incoming.drillTypes)) data.drillTypes = [...new Set([...data.drillTypes, ...incoming.drillTypes])];
     if (Array.isArray(incoming.favDrills)) data.favDrills = [...new Set([...data.favDrills, ...incoming.favDrills])];
     save();
-    alert(`Přidáno tréninků: ${added.length}, zbraní: ${addedW.length}, výsledků cvičení: ${nR}, nákupů: ${nP}, dávek přebíjení: ${nL}`);
+    alert(`Přidáno tréninků: ${added.length}, zbraní: ${addedW.length}, výsledků cvičení: ${nR}, nákupů: ${nP}, dávek přebíjení: ${nL}, laborací: ${nLab}, zkoušek navážek: ${nT}`);
   } catch (err) {
     alert('Import selhal: ' + err.message);
   }

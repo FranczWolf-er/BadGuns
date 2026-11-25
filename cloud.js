@@ -8,7 +8,7 @@
 
 const CFG = Object.assign({ clientId: '', tenant: 'common' }, window.BADGUNS_CONFIG || {});
 const REDIRECT = location.origin + location.pathname.replace(/index\.html$/, '');
-const COLS = ['trainings', 'weapons', 'results', 'customDrills', 'purchases', 'reloads'];
+const COLS = ['trainings', 'weapons', 'results', 'customDrills', 'purchases', 'reloads', 'loads', 'loadTests'];
 const TOK_KEY = 'badguns.tok.onedrive', PEND_KEY = 'badguns.auth.pending', LAST_KEY = 'badguns.lastBackup',
       WAS_KEY = 'badguns.cloud.was', CHANGE_KEY = 'badguns.lastChange';
 const OD_AUTH = 'https://login.microsoftonline.com/' + CFG.tenant + '/oauth2/v2.0/';
@@ -61,7 +61,7 @@ const persistLocal = () => { try { localStorage.setItem(KEY, JSON.stringify(data
 /* ---------- sloučení se zálohou ---------- */
 function cloudExport() {
   const nd = a => a.filter(x => !x.demo).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-  return { app: 'badguns', v: 1, trainings: nd(data.trainings), weapons: nd(data.weapons), results: nd(data.results), purchases: nd(data.purchases), reloads: nd(data.reloads),
+  return { app: 'badguns', v: 1, trainings: nd(data.trainings), weapons: nd(data.weapons), results: nd(data.results), purchases: nd(data.purchases), reloads: nd(data.reloads), loads: nd(data.loads), loadTests: nd(data.loadTests),
     customDrills: nd(data.customDrills), favDrills: data.favDrills, drillTypes: data.drillTypes,
     prefsAt: data.prefsAt || 0, tomb: data.tomb };
 }
