@@ -2,7 +2,14 @@
 
 ## Naplánováno
 
-_Zatím nic, další kroky vybereme z nápadů._
+### Laborace přebíjených nábojů (navážky)
+- Uložit laboraci: náboj specifikovaný jako u přebíjení (ráže, střela, prach, zápalka, nábojnice, případně délka náboje) a k němu zkoušené navážky.
+- V záložce Výkony přibude za Cvičení a Závody třetí sekce **Navážky**.
+- U každé navážky zapisovat výsledky střelby:
+  - bodový soustřel (body),
+  - rozptyl (velikost skupiny),
+  - rychlost náboje.
+- Výsledky navážek porovnat mezi sebou, aby bylo vidět, která navážka je nejlepší.
 
 ## Nápady k rozhodnutí
 - Propojit výsledky cvičení se Záznamy: při zápisu cvičení nabídnout připsání ran do tréninku ze stejného dne.
